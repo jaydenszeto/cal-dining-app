@@ -12,6 +12,7 @@ app.use(express.json());
 const BERKELEY_API_URL = "https://dining.berkeley.edu/wp-admin/admin-ajax.php";
 const AJAX_ACTION = 'cald_filter_xml';
 
+// --- Helper function to fetch menu for a single date ---
 async function fetchMenuForDate(dateStr) {
     const formData = new URLSearchParams();
     formData.append('action', AJAX_ACTION);
@@ -19,20 +20,21 @@ async function fetchMenuForDate(dateStr) {
     formData.append('location', '');
     formData.append('mealperiod', '');
 
-    const response = await fetch(BERKELEY_API_URL, {
-        method: 'POST',
-        body: formData,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-
-    if (!response.ok) {
-        console.error(`API error for date ${dateStr}: ${response.statusText}`);
-        return null; // Return null on error instead of throwing
+    try {
+        const response = await fetch(BERKELEY_API_URL, {
+            method: 'POST',
+            body: formData,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
+        if (!response.ok) return null; // Return null on error
+        return await response.text();
+    } catch (error) {
+        console.error(`Error fetching for ${dateStr}:`, error);
+        return null;
     }
-    return response.text();
 }
 
-// Endpoint to check a single day (today)
+// --- Endpoint to check today's menu ---
 app.post('/api/menu', async (req, res) => {
     try {
         const { date } = req.body;
@@ -40,34 +42,39 @@ app.post('/api/menu', async (req, res) => {
         const menuHtml = await fetchMenuForDate(date);
         res.send(menuHtml);
     } catch (error) {
-        console.error('Error in /api/menu:', error);
-        res.status(500).json({ error: 'Failed to fetch today\'s menu data.' });
+        res.status(500).json({ error: 'Failed to fetch menu data.' });
     }
 });
 
-// --- NEW ROBUST ENDPOINT ---
-// Fetches raw HTML for multiple dates at once
-app.post('/api/menu/batch', async (req, res) => {
+// --- Endpoint to find the NEXT available day in the week ---
+app.post('/api/menu/week', async (req, res) => {
     try {
-        const { dates } = req.body;
-        if (!Array.isArray(dates) || dates.length === 0) {
-            return res.status(400).json({ error: 'An array of dates is required.' });
+        const { favoriteFoods, targetLocations } = req.body;
+
+        for (let i = 1; i <= 7; i++) { // Check tomorrow through next 7 days
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+            
+            const menuHtml = await fetchMenuForDate(dateStr);
+            if (!menuHtml) continue;
+
+            // Simple text search on the server
+            const menuText = menuHtml.toLowerCase();
+            const foundFood = favoriteFoods.find(food => menuText.includes(food.toLowerCase()));
+
+            if (foundFood) {
+                // If we find a match, send back the date and the HTML for the frontend to parse properly
+                return res.json({ found: true, date, menuHtml });
+            }
         }
-
-        const promises = dates.map(dateStr => fetchMenuForDate(dateStr));
-        const results = await Promise.all(promises);
-
-        const menuData = {};
-        dates.forEach((dateStr, index) => {
-            menuData[dateStr] = results[index];
-        });
-
-        res.json(menuData);
+        res.json({ found: false });
     } catch (error) {
-        console.error('Error in /api/menu/batch:', error);
-        res.status(500).json({ error: 'Failed to fetch batch menu data.' });
+        console.error('Error in /api/menu/week:', error);
+        res.status(500).json({ error: 'Failed to search weekly menu.' });
     }
 });
+
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
