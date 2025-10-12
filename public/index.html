@@ -67,14 +67,16 @@
             const populateLocations = () => { ALL_LOCATIONS.forEach(loc => { const div = document.createElement('div'); div.className = 'flex items-center'; div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; UIElements.locationsContainer.appendChild(div); }); };
             const savePreferences = () => { const favs = UIElements.foodsInput.value.trim(); const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods: favs, selectedLocations: locs })); };
             const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { UIElements.foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
+            
+            // ✅ FIX: Only hide results when loading STARTS
             const showLoading = (isLoading, text = 'Checking...') => {
-            UIElements.loadingContainer.classList.toggle('hidden', !isLoading);
-            UIElements.loadingText.textContent = text;
-            // Only hide the results container when loading STARTS.
-            if (isLoading) {
-                UIElements.resultsContainer.classList.add('hidden');
-            }
+                UIElements.loadingContainer.classList.toggle('hidden', !isLoading);
+                UIElements.loadingText.textContent = text;
+                if (isLoading) {
+                    UIElements.resultsContainer.classList.add('hidden');
+                }
             };
+
             function parseAndFindFavorites(htmlText, favoriteFoods, targetLocations) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
@@ -86,7 +88,11 @@
                         location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
                             meal.querySelectorAll("li.recip span, li.recipe span").forEach(recipeSpan => {
-                                const recipeName = recipeSpan.textContent.trim();
+                                // ✅ FIX: Isolate recipe name from allergen/icon text
+                                const clonedSpan = recipeSpan.cloneNode(true);
+                                clonedSpan.querySelectorAll('*').forEach(child => child.remove());
+                                const recipeName = clonedSpan.textContent.trim();
+
                                 if (favoriteFoods.some(food => recipeName.toLowerCase().includes(food))) {
                                     foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
                                 }
@@ -134,7 +140,8 @@
                         const weekResult = await weekRes.json();
                         if (weekResult.found) {
                             const foundLater = parseAndFindFavorites(weekResult.menuHtml, favoriteFoods, targetLocations);
-                            const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                            // ✅ FIX: Add timeZone: 'UTC' to prevent off-by-one date errors
+                            const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
                             displayResults(
                                 "Not today, but coming up soon! 😊",
                                 `<p class="mb-3">The next available day is <strong>${dayName}</strong>:</p><ul class="space-y-2 list-disc list-inside">${foundLater.join('')}</ul>`
@@ -158,4 +165,3 @@
     </script>
 </body>
 </html>
-
