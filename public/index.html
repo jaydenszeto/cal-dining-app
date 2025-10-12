@@ -25,7 +25,7 @@
             <div class="p-6 border-b border-gray-200">
                 <div class="mb-4">
                     <label for="favorite-foods" class="block text-sm font-medium text-gray-700 mb-1">Favorite Foods</label>
-                    <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., eggs, curry, pizza">
+                    <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., curry, shrimp, tacos">
                     <p class="text-xs text-gray-500 mt-1">Separate foods with a comma.</p>
                 </div>
                 <div>
@@ -36,7 +36,7 @@
             <div class="p-6">
                 <button id="check-menu-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <span>Check Today's Menu</span>
+                    <span>Check Menu</span>
                 </button>
             </div>
             
@@ -76,28 +76,20 @@
                 }
             };
 
-            // ✅ FIX: Complete parser rewrite for the new HTML structure
             function parseAndFindFavorites(htmlText, favoriteFoods, targetLocations) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
                 const foundItems = [];
-                
                 doc.querySelectorAll("li.location-name").forEach(location => {
                     const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
-                    
                     if (locationName && targetLocations.includes(locationName)) {
                         location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
-                            
-                            // Iterate through each recipe item in the new structure
                             meal.querySelectorAll("li.recip").forEach(recipeItem => {
-                                // The recipe name is the text of the first span inside the li.recip
-                                const recipeNameSpan = recipeItem.querySelector("span"); 
-                                
+                                const recipeNameSpan = recipeItem.querySelector("span");
                                 if (recipeNameSpan) {
                                     const recipeName = recipeNameSpan.textContent.trim();
-                                    // Ensure it's a valid, non-empty recipe name before checking
-                                    if (recipeName && favoriteFoods.some(food => recipeName.toLowerCase().includes(food))) {
+                                    if (recipeName && favoriteFoods.some(food => recipeName.toLowerCase().includes(food.toLowerCase()))) {
                                         foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
                                     }
                                 }
@@ -105,17 +97,18 @@
                         });
                     }
                 });
-                return [...new Set(foundItems)]; // Return unique items
+                return [...new Set(foundItems)];
             }
 
             function displayResults(title, content) {
-                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">${title}</h2><div>${content}</div>`;
+                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">${title}</h2><div class="space-y-4">${content}</div>`;
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
+            // ✅ NEW: Main function to handle individual food lookups
             async function checkMenu() {
                 savePreferences();
-                const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim().toLowerCase()).filter(f => f);
+                const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim()).filter(f => f);
                 const targetLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
 
                 if (favoriteFoods.length === 0 || targetLocations.length === 0) {
@@ -123,43 +116,62 @@
                     return;
                 }
 
-                showLoading(true, "Checking today's menu...");
+                showLoading(true, "Checking menus...");
 
                 try {
-                    const today = new Date();
-                    const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+                    // Create a list of promises, one for each food to check
+                    const checkPromises = favoriteFoods.map(food => findNextAvailable(food, targetLocations));
+                    
+                    // Wait for all the checks to complete
+                    const results = await Promise.all(checkPromises);
 
-                    const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
-                    if (!res.ok) throw new Error('Could not connect to the dining hall server.');
-                    const htmlText = await res.text();
+                    displayResults("Menu Report", results.join(''));
 
-                    const foundToday = parseAndFindFavorites(htmlText, favoriteFoods, targetLocations);
-
-                    if (foundToday.length > 0) {
-                        displayResults("Great news! Found on the menu today: 🌮", `<ul class="space-y-2 list-disc list-inside">${foundToday.join('')}</ul>`);
-                    } else {
-                        showLoading(true, "Not found today. Checking the rest of the week...");
-                        const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods, targetLocations }) });
-                        if (!weekRes.ok) throw new Error('Could not search the week.');
-                        
-                        const weekResult = await weekRes.json();
-                        if (weekResult.found) {
-                            const foundLater = parseAndFindFavorites(weekResult.menuHtml, favoriteFoods, targetLocations);
-                            const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
-                            displayResults(
-                                "Not today, but coming up soon! 😊",
-                                `<p class="mb-3">The next available day is <strong>${dayName}</strong>:</p><ul class="space-y-2 list-disc list-inside">${foundLater.join('')}</ul>`
-                            );
-                        } else {
-                            displayResults("Sorry... 😔", "<p>None of your favorites were found on the menu for the next 7 days.</p>");
-                        }
-                    }
                 } catch (e) {
                     console.error(e);
-                    displayResults("Error fetching menu.", `<p class="text-red-600">Could not connect to the dining hall server. This is likely due to a browser security policy (CORS). This app may need to be run from a server with a proxy to work correctly.</p>`);
+                    displayResults("Error", `<p class="text-red-600">Could not connect to the dining hall server. Please try again later.</p>`);
                 } finally {
                     showLoading(false);
                 }
+            }
+            
+            // ✅ NEW: Helper function to find the next date for a SINGLE food
+            async function findNextAvailable(food, targetLocations) {
+                // First, check today
+                const today = new Date();
+                const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+                
+                const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
+                if (!res.ok) throw new Error('Server connection failed.');
+                
+                const htmlText = await res.text();
+                const foundToday = parseAndFindFavorites(htmlText, [food], targetLocations);
+
+                if (foundToday.length > 0) {
+                    return `<div class="p-4 bg-green-100 rounded-lg">
+                                <p class="font-bold text-green-800">✅ Great news! Found "${food}" today:</p>
+                                <ul class="mt-2 space-y-1 list-disc list-inside text-green-700">${foundToday.join('')}</ul>
+                            </div>`;
+                }
+
+                // If not found today, check the rest of the week
+                const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods: [food], targetLocations }) });
+                if (!weekRes.ok) throw new Error('Weekly search failed.');
+
+                const weekResult = await weekRes.json();
+                if (weekResult.found) {
+                    const foundLater = parseAndFindFavorites(weekResult.menuHtml, [food], targetLocations);
+                    const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+                    return `<div class="p-4 bg-yellow-100 rounded-lg">
+                                <p class="font-bold text-yellow-800">🗓️ Found "${food}" coming up on <strong>${dayName}</strong>:</p>
+                                <ul class="mt-2 space-y-1 list-disc list-inside text-yellow-700">${foundLater.join('')}</ul>
+                            </div>`;
+                }
+
+                // If not found at all
+                return `<div class="p-4 bg-red-100 rounded-lg">
+                            <p class="font-bold text-red-800">❌ Sorry, "${food}" was not found on the menu for the next 7 days.</p>
+                        </div>`;
             }
 
             populateLocations();
