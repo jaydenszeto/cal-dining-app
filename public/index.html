@@ -10,8 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
         .custom-checkbox:checked {
             background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-            background-color: #2563eb;
-            border-color: #2563eb;
+            background-color: #2563eb; border-color: #2563eb;
         }
     </style>
 </head>
@@ -20,138 +19,131 @@
     <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="p-6 bg-blue-600 text-white">
-                <h1 class="text-2xl font-bold">🌮 Cal Dining Menu Checker</h1>
-                <p class="mt-1 text-blue-100">Find your favorite foods at UC Berkeley.</p>
+                <h1 class="text-2xl font-bold">Cal Dining Menu Checker</h1>
+                <p class="mt-1 text-blue-100">See if what you want to eat is on the menu!</p>
             </div>
-
-            <!-- Settings Section -->
             <div class="p-6 border-b border-gray-200">
                 <div class="mb-4">
                     <label for="favorite-foods" class="block text-sm font-medium text-gray-700 mb-1">Favorite Foods</label>
                     <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., eggs, curry, pizza">
                     <p class="text-xs text-gray-500 mt-1">Separate foods with a comma.</p>
                 </div>
-
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Dining Halls</label>
-                    <div id="locations-container" class="grid grid-cols-2 gap-x-4 gap-y-2">
-                        <!-- Checkboxes will be inserted by JS -->
-                    </div>
+                    <div id="locations-container" class="grid grid-cols-2 gap-x-4 gap-y-2"></div>
                 </div>
             </div>
-
-            <!-- Action Button -->
             <div class="p-6">
                 <button id="check-menu-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
                     <svg id="search-icon" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     <span id="button-text">Check Today's Menu</span>
                 </button>
             </div>
-
-            <!-- Results Section -->
+            
+            <!-- Today's Results -->
             <div id="results-container" class="p-6 bg-gray-50 hidden">
                 <h2 id="results-title" class="text-lg font-semibold mb-3"></h2>
-                <ul id="results-list" class="space-y-3">
-                    <!-- Results will be inserted here -->
-                </ul>
+                <ul id="results-list" class="space-y-3"></ul>
+            </div>
+            
+            <!-- Upcoming Results -->
+            <div id="upcoming-container" class="p-6 bg-blue-50 border-t border-blue-200 hidden">
+                <h2 id="upcoming-title" class="text-lg font-semibold mb-3 text-blue-800"></h2>
+                <ul id="upcoming-list" class="space-y-3"></ul>
             </div>
         </div>
-
         <p class="text-center text-xs text-gray-400 mt-6">Created with ❤️</p>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- ELEMENTS ---
             const foodsInput = document.getElementById('favorite-foods');
             const locationsContainer = document.getElementById('locations-container');
             const checkMenuBtn = document.getElementById('check-menu-btn');
+            
             const resultsContainer = document.getElementById('results-container');
             const resultsTitle = document.getElementById('results-title');
             const resultsList = document.getElementById('results-list');
+            
+            const upcomingContainer = document.getElementById('upcoming-container');
+            const upcomingTitle = document.getElementById('upcoming-title');
+            const upcomingList = document.getElementById('upcoming-list');
+
             const loadingSpinner = document.getElementById('loading-spinner');
             const buttonText = document.getElementById('button-text');
             const searchIcon = document.getElementById('search-icon');
             
-            // --- CONFIG ---
             const ALL_LOCATIONS = ["Crossroads", "Cafe 3", "Foothill", "Clark Kerr Campus"];
 
-            // --- FUNCTIONS ---
+            // --- UI & PREFERENCE FUNCTIONS ---
+            const populateLocations = () => { ALL_LOCATIONS.forEach(loc => { const div = document.createElement('div'); div.className = 'flex items-center'; div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; locationsContainer.appendChild(div); }); };
+            const savePreferences = () => { const favs = foodsInput.value.trim(); const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods: favs, selectedLocations: locs })); };
+            const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
+            const showLoading = (isLoading, text = 'Checking...') => { checkMenuBtn.disabled = isLoading; loadingSpinner.classList.toggle('hidden', !isLoading); searchIcon.classList.toggle('hidden', isLoading); buttonText.textContent = isLoading ? text : "Check Today's Menu"; };
 
-            function populateLocations() {
-                ALL_LOCATIONS.forEach(loc => {
-                    const div = document.createElement('div');
-                    div.className = 'flex items-center';
-                    div.innerHTML = `
-                        <input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                        <label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>
-                    `;
-                    locationsContainer.appendChild(div);
-                });
-            }
-
-            function savePreferences() {
-                const favoriteFoods = foodsInput.value.trim();
-                const selectedLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
-                localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods, selectedLocations }));
-            }
-
-            function loadPreferences() {
-                const prefs = JSON.parse(localStorage.getItem('diningPrefs'));
-                if (prefs) {
-                    foodsInput.value = prefs.favoriteFoods || '';
-                    if (prefs.selectedLocations) {
-                        prefs.selectedLocations.forEach(locValue => {
-                            const checkbox = document.querySelector(`input[value="${locValue}"]`);
-                            if (checkbox) checkbox.checked = true;
+            // --- MENU PARSING LOGIC ---
+            function parseHtmlForMenu(htmlText, favoriteFoods, targetLocations) {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlText, 'text/html');
+                let foundItems = [];
+                const locations = doc.querySelectorAll("li.location-name");
+                locations.forEach(location => {
+                    const locationName = location.querySelector("span.cafe-title").textContent.trim();
+                    if (targetLocations.includes(locationName)) {
+                        const meals = location.querySelectorAll("li.preiod-name");
+                        meals.forEach(meal => {
+                            const mealName = meal.querySelector("span").textContent.trim().replace("Fall - ", "");
+                            const recipes = meal.querySelectorAll("li.recip");
+                            recipes.forEach(recipe => {
+                                const recipeName = recipe.querySelector("span").textContent.trim();
+                                for (const food of favoriteFoods) {
+                                    if (recipeName.toLowerCase().includes(food)) {
+                                        foundItems.push({ recipe: recipeName, location: locationName, meal: mealName });
+                                        break;
+                                    }
+                                }
+                            });
                         });
                     }
-                }
-            }
-            
-            function showLoading(isLoading) {
-                if (isLoading) {
-                    checkMenuBtn.disabled = true;
-                    loadingSpinner.classList.remove('hidden');
-                    searchIcon.classList.add('hidden');
-                    buttonText.textContent = 'Checking...';
-                } else {
-                    checkMenuBtn.disabled = false;
-                    loadingSpinner.classList.add('hidden');
-                    searchIcon.classList.remove('hidden');
-                    buttonText.textContent = "Check Today's Menu";
-                }
+                });
+                return foundItems;
             }
 
-            function displayResults(foundItems) {
+            // --- DISPLAY FUNCTIONS ---
+            function displayTodaysResults(foundItems) {
                 resultsContainer.classList.remove('hidden');
-                resultsList.innerHTML = ''; // Clear previous results
-
+                resultsList.innerHTML = '';
                 if (foundItems.length > 0) {
-                    resultsTitle.textContent = `Great news! Found ${foundItems.length} of your favorites:`;
+                    resultsTitle.textContent = `Great news! Found your favorites for today:`;
                     resultsTitle.className = "text-lg font-semibold mb-3 text-green-700";
-                    foundItems.forEach(item => {
-                        const li = document.createElement('li');
-                        li.className = 'p-3 bg-white border border-gray-200 rounded-lg shadow-sm';
-                        li.innerHTML = `
-                            <p class="font-semibold text-gray-800">${item.recipe}</p>
-                            <p class="text-sm text-gray-500">${item.location} for ${item.meal}</p>
-                        `;
-                        resultsList.appendChild(li);
-                    });
+                    foundItems.forEach(item => { const li = document.createElement('li'); li.className = 'p-3 bg-white border border-gray-200 rounded-lg shadow-sm'; li.innerHTML = `<p class="font-semibold text-gray-800">${item.recipe}</p><p class="text-sm text-gray-500">${item.location} for ${item.meal}</p>`; resultsList.appendChild(li); });
+                    return true;
                 } else {
                     resultsTitle.textContent = `Sorry, none of your favorites are on the menu today. 😔`;
                     resultsTitle.className = "text-lg font-semibold mb-3 text-gray-600";
+                    return false;
+                }
+            }
+            
+            function displayUpcomingResults(data, favoriteFoods, targetLocations) {
+                upcomingContainer.classList.remove('hidden');
+                upcomingList.innerHTML = '';
+
+                if (data.success) {
+                    upcomingTitle.innerHTML = `But they're coming up soon! <br> Next available on <span class="text-blue-600 font-bold">${data.date}</span>:`;
+                    const upcomingItems = parseHtmlForMenu(data.html, favoriteFoods, targetLocations);
+                    upcomingItems.forEach(item => { const li = document.createElement('li'); li.className = 'p-3 bg-white border border-gray-200 rounded-lg shadow-sm'; li.innerHTML = `<p class="font-semibold text-gray-800">${item.recipe}</p><p class="text-sm text-gray-500">${item.location} for ${item.meal}</p>`; upcomingList.appendChild(li); });
+                } else {
+                    upcomingTitle.textContent = "Nothing found on the menu for the next 7 days.";
                 }
             }
 
             async function checkMenu() {
                 savePreferences();
-                showLoading(true);
+                showLoading(true, "Checking today...");
+                resultsContainer.classList.add('hidden');
+                upcomingContainer.classList.add('hidden');
 
                 const favoriteFoods = foodsInput.value.split(',').map(f => f.trim().toLowerCase()).filter(f => f);
                 const targetLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
@@ -162,57 +154,34 @@
                     return;
                 }
 
-                const today = new Date();
-                const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
-                
+                // --- STEP 1: Check Today's Menu ---
                 try {
-                    const response = await fetch('/api/menu', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ date: dateStr })
-                    });
+                    const today = new Date();
+                    const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+                    const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
+                    if (!res.ok) throw new Error('Server error checking today\'s menu.');
+                    const htmlText = await res.text();
+                    const todaysItems = parseHtmlForMenu(htmlText, favoriteFoods, targetLocations);
                     
-                    if (!response.ok) {
-                        throw new Error(`Server responded with status: ${response.status}`);
+                    const foundToday = displayTodaysResults(todaysItems);
+                    
+                    if (foundToday) {
+                        showLoading(false);
+                        return; // Found food today, so we're done!
                     }
-                    
-                    const htmlText = await response.text();
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(htmlText, 'text/html');
-                    
-                    let foundItems = [];
-                    const locations = doc.querySelectorAll("li.location-name");
-                    
-                    locations.forEach(location => {
-                        const locationName = location.querySelector("span.cafe-title").textContent.trim();
-                        if (targetLocations.includes(locationName)) {
-                            const meals = location.querySelectorAll("li.preiod-name"); // Note: "preiod" is a typo in their HTML
-                            meals.forEach(meal => {
-                                const mealName = meal.querySelector("span").textContent.trim().replace("Fall - ", "");
-                                const recipes = meal.querySelectorAll("li.recip");
-                                recipes.forEach(recipe => {
-                                    const recipeName = recipe.querySelector("span").textContent.trim();
-                                    for (const food of favoriteFoods) {
-                                        if (recipeName.toLowerCase().includes(food)) {
-                                            foundItems.push({ recipe: recipeName, location: locationName, meal: mealName });
-                                            break; // Avoid duplicate adds for same recipe
-                                        }
-                                    }
-                                });
-                            });
-                        }
-                    });
 
-                    displayResults(foundItems);
+                    // --- STEP 2: If nothing today, check the week ---
+                    showLoading(true, "Checking the week...");
+                    const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods, targetLocations }) });
+                    if (!weekRes.ok) throw new Error('Server error checking weekly menu.');
+                    const weekData = await weekRes.json();
+                    displayUpcomingResults(weekData, favoriteFoods, targetLocations);
 
                 } catch (error) {
                     console.error("Fetch Error:", error);
                     resultsContainer.classList.remove('hidden');
                     resultsTitle.textContent = "Error fetching menu.";
-                    resultsTitle.className = "text-lg font-semibold mb-3 text-red-600";
-                    resultsList.innerHTML = `<li class="p-3 bg-white border border-red-200 rounded-lg text-sm text-red-700">Could not connect to the server. Please check your internet connection and try again.</li>`;
+                    resultsList.innerHTML = `<li class="p-3 bg-white border border-red-200 rounded-lg text-sm text-red-700">Could not connect to the server. Please try again later.</li>`;
                 } finally {
                     showLoading(false);
                 }
