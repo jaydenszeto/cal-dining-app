@@ -87,13 +87,17 @@
                 
                 doc.querySelectorAll("li.location-name").forEach(location => {
                     const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
-                    if (targetLocations.includes(locationName)) {
+                    if (locationName && targetLocations.includes(locationName)) {
                         menuByLocation[locationName] = {};
-                        // --- FIX: Check for both the typo 'preiod' and corrected 'period' ---
+                         // Check for both the old typo 'preiod' and the correct 'period'
                         location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
-                            const recipes = Array.from(meal.querySelectorAll("li.recip span")).map(span => span.textContent.trim());
-                            if (recipes.length > 0) menuByLocation[locationName][mealName] = recipes;
+                            // --- THE CRITICAL FIX ---
+                            // Check for both the old typo 'recip' and the correct 'recipe'
+                            const recipes = Array.from(meal.querySelectorAll("li.recip span, li.recipe span")).map(span => span.textContent.trim());
+                            if (mealName && recipes.length > 0) {
+                                menuByLocation[locationName][mealName] = recipes;
+                            }
                         });
                     }
                 });
@@ -128,8 +132,8 @@
             function displayFullMenuResults(menu, favoriteFoods) {
                 UIElements.resultsTitle.textContent = "Today's Full Menu";
                 UIElements.resultsContent.innerHTML = '';
-                if (Object.keys(menu).length === 0) {
-                    UIElements.resultsContent.textContent = "No menu information is available for the selected dining halls today.";
+                if (Object.keys(menu).length === 0 || Object.values(menu).every(meals => Object.keys(meals).length === 0)) {
+                    UIElements.resultsContent.innerHTML = `<p class="text-gray-600">No menu information could be found for the selected dining halls today. They may be closed or the menu has not been posted yet.</p>`;
                     return;
                 }
                 Object.entries(menu).forEach(([location, meals]) => {
@@ -139,12 +143,14 @@
                         <ul class="mt-1 space-y-1 text-sm list-disc list-inside">
                             ${recipes.map(recipe => {
                                 const isFavorite = favoriteFoods.some(fav => recipe.toLowerCase().includes(fav));
-                                return `<li class="${isFavorite ? 'font-bold bg-green-100 rounded-md p-1' : ''}">${recipe}</li>`;
+                                return `<li class="${isFavorite ? 'font-bold bg-green-100 text-green-800 rounded-md p-1' : 'text-gray-700'}">${recipe}</li>`;
                             }).join('')}
                         </ul>
                     `).join('');
-                    locationDiv.innerHTML = `<h3 class="text-lg font-bold text-blue-700 border-b pb-1">${location}</h3>${mealHtml}`;
-                    UIElements.resultsContent.appendChild(locationDiv);
+                    if (mealHtml.trim() !== '') {
+                        locationDiv.innerHTML = `<h3 class="text-lg font-bold text-blue-700 border-b pb-1">${location}</h3>${mealHtml}`;
+                        UIElements.resultsContent.appendChild(locationDiv);
+                    }
                 });
             }
 
@@ -170,7 +176,7 @@
                     if (!res.ok) throw new Error('Server error fetching weekly data.');
                     const weeklyData = await res.json();
 
-                    let results = favoriteFoods.reduce((acc, food) => ({...acc, [food]: {found: false}}), {});
+                    let results = favoriteFoods.reduce((acc, food) => ({...acc, [food]: {found: false, items: []}}), {});
 
                     futureDates.forEach((dateStr, index) => {
                         const menuByLocation = parseHtml(weeklyData[dateStr], targetLocations);
@@ -178,12 +184,13 @@
                             Object.entries(meals).forEach(([meal, recipes]) => {
                                 recipes.forEach(recipe => {
                                     favoriteFoods.forEach(food => {
-                                        // --- FIX: Logic to correctly gather all items on the first day a food is found ---
                                         if (recipe.toLowerCase().includes(food)) {
-                                            if (!results[food].found) { // First time we've ever seen this food
-                                                results[food] = { found: true, date: dateObjs[index], items: [{ recipe, location, meal }] };
-                                            } else if (results[food].date.toDateString() === dateObjs[index].toDateString()) {
-                                                // It's another match on the same day we already found it, so add it
+                                            if (!results[food].found) { // First time we find this food
+                                                results[food].found = true;
+                                                results[food].date = dateObjs[index];
+                                            }
+                                            // Only add if it's on the first day we found it
+                                            if (results[food].date.toDateString() === dateObjs[index].toDateString()) {
                                                 results[food].items.push({ recipe, location, meal });
                                             }
                                         }
