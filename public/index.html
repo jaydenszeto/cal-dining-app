@@ -68,7 +68,6 @@
             const savePreferences = () => { const favs = UIElements.foodsInput.value.trim(); const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods: favs, selectedLocations: locs })); };
             const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { UIElements.foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
             
-            // ✅ FIX: Only hide results when loading STARTS
             const showLoading = (isLoading, text = 'Checking...') => {
                 UIElements.loadingContainer.classList.toggle('hidden', !isLoading);
                 UIElements.loadingText.textContent = text;
@@ -77,6 +76,7 @@
                 }
             };
 
+            // ✅ FIX: Complete parser rewrite for the new HTML structure
             function parseAndFindFavorites(htmlText, favoriteFoods, targetLocations) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
@@ -84,17 +84,22 @@
                 
                 doc.querySelectorAll("li.location-name").forEach(location => {
                     const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
+                    
                     if (locationName && targetLocations.includes(locationName)) {
                         location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
-                            meal.querySelectorAll("li.recip span, li.recipe span").forEach(recipeSpan => {
-                                // ✅ FIX: Isolate recipe name from allergen/icon text
-                                const clonedSpan = recipeSpan.cloneNode(true);
-                                clonedSpan.querySelectorAll('*').forEach(child => child.remove());
-                                const recipeName = clonedSpan.textContent.trim();
-
-                                if (favoriteFoods.some(food => recipeName.toLowerCase().includes(food))) {
-                                    foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
+                            
+                            // Iterate through each recipe item in the new structure
+                            meal.querySelectorAll("li.recip").forEach(recipeItem => {
+                                // The recipe name is the text of the first span inside the li.recip
+                                const recipeNameSpan = recipeItem.querySelector("span"); 
+                                
+                                if (recipeNameSpan) {
+                                    const recipeName = recipeNameSpan.textContent.trim();
+                                    // Ensure it's a valid, non-empty recipe name before checking
+                                    if (recipeName && favoriteFoods.some(food => recipeName.toLowerCase().includes(food))) {
+                                        foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
+                                    }
                                 }
                             });
                         });
@@ -140,7 +145,6 @@
                         const weekResult = await weekRes.json();
                         if (weekResult.found) {
                             const foundLater = parseAndFindFavorites(weekResult.menuHtml, favoriteFoods, targetLocations);
-                            // ✅ FIX: Add timeZone: 'UTC' to prevent off-by-one date errors
                             const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
                             displayResults(
                                 "Not today, but coming up soon! 😊",
