@@ -46,10 +46,13 @@ app.post('/api/menu', async (req, res) => {
     }
 });
 
-// --- Endpoint to find the NEXT available day in the week ---
+// --- Endpoint to find the NEXT available day in the week (CORRECTED LOGIC) ---
 app.post('/api/menu/week', async (req, res) => {
     try {
         const { favoriteFoods, targetLocations } = req.body;
+        if (!favoriteFoods || !targetLocations) {
+            return res.status(400).json({ error: 'favoriteFoods and targetLocations are required.' });
+        }
 
         for (let i = 1; i <= 7; i++) { // Check tomorrow through next 7 days
             const date = new Date();
@@ -59,16 +62,51 @@ app.post('/api/menu/week', async (req, res) => {
             const menuHtml = await fetchMenuForDate(dateStr);
             if (!menuHtml) continue;
 
-            // Simple text search on the server
             const menuText = menuHtml.toLowerCase();
-            const foundFood = favoriteFoods.find(food => menuText.includes(food.toLowerCase()));
 
-            if (foundFood) {
-                // If we find a match, send back the date and the HTML for the frontend to parse properly
+            // This flag will be set to true if we find a food at a specified location.
+            let hasMatch = false;
+
+            // Loop through each location the user selected.
+            for (const location of targetLocations) {
+                const locationIndex = menuText.indexOf(location.toLowerCase());
+
+                // If the location isn't on the menu for this day, skip it.
+                if (locationIndex === -1) {
+                    continue;
+                }
+                
+                // Find the end of this location's menu section by looking for the start of the next one.
+                const nextLocationHeader = '<li class="location-name">';
+                const nextLocationIndex = menuText.indexOf(nextLocationHeader, locationIndex + 1);
+
+                // Define the specific chunk of HTML for this one location's menu.
+                const searchChunk = nextLocationIndex !== -1 
+                    ? menuText.substring(locationIndex, nextLocationIndex) 
+                    : menuText.substring(locationIndex);
+                
+                // Now, only search for the favorite food within that location's chunk.
+                for (const food of favoriteFoods) {
+                    if (searchChunk.includes(food.toLowerCase())) {
+                        hasMatch = true;
+                        break; // Found a food, no need to check other foods for this location
+                    }
+                }
+
+                if (hasMatch) {
+                    break; // Found a match, no need to check other locations
+                }
+            }
+
+            // If we found a valid match, return the data and stop looping.
+            if (hasMatch) {
                 return res.json({ found: true, date, menuHtml });
             }
         }
+
+        // If the loop completes without finding anything.
         res.json({ found: false });
+
     } catch (error) {
         console.error('Error in /api/menu/week:', error);
         res.status(500).json({ error: 'Failed to search weekly menu.' });
@@ -79,4 +117,3 @@ app.post('/api/menu/week', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
