@@ -19,8 +19,8 @@
     <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
             <div class="p-6 bg-blue-600 text-white">
-                <h1 class="text-2xl font-bold">Cal Dining Menu Checker</h1>
-                <p class="mt-1 text-blue-100">See if what you want to eat is on the menu!</p>
+                <h1 class="text-2xl font-bold">🌮 Cal Dining Menu Checker</h1>
+                <p class="mt-1 text-blue-100">Find your favorite foods at UC Berkeley.</p>
             </div>
             <div class="p-6 border-b border-gray-200">
                 <div class="mb-4">
@@ -41,13 +41,11 @@
                 </button>
             </div>
             
-            <!-- Today's Results -->
             <div id="results-container" class="p-6 bg-gray-50 hidden">
                 <h2 id="results-title" class="text-lg font-semibold mb-3"></h2>
                 <ul id="results-list" class="space-y-3"></ul>
             </div>
             
-            <!-- Upcoming Results -->
             <div id="upcoming-container" class="p-6 bg-blue-50 border-t border-blue-200 hidden">
                 <h2 id="upcoming-title" class="text-lg font-semibold mb-3 text-blue-800"></h2>
                 <ul id="upcoming-list" class="space-y-3"></ul>
@@ -76,29 +74,28 @@
             
             const ALL_LOCATIONS = ["Crossroads", "Cafe 3", "Foothill", "Clark Kerr Campus"];
 
-            // --- UI & PREFERENCE FUNCTIONS ---
             const populateLocations = () => { ALL_LOCATIONS.forEach(loc => { const div = document.createElement('div'); div.className = 'flex items-center'; div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; locationsContainer.appendChild(div); }); };
             const savePreferences = () => { const favs = foodsInput.value.trim(); const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods: favs, selectedLocations: locs })); };
             const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
             const showLoading = (isLoading, text = 'Checking...') => { checkMenuBtn.disabled = isLoading; loadingSpinner.classList.toggle('hidden', !isLoading); searchIcon.classList.toggle('hidden', isLoading); buttonText.textContent = isLoading ? text : "Check Today's Menu"; };
 
-            // --- MENU PARSING LOGIC ---
             function parseHtmlForMenu(htmlText, favoriteFoods, targetLocations) {
+                if (!htmlText) return [];
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
                 let foundItems = [];
                 const locations = doc.querySelectorAll("li.location-name");
                 locations.forEach(location => {
-                    const locationName = location.querySelector("span.cafe-title").textContent.trim();
+                    const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
                     if (targetLocations.includes(locationName)) {
                         const meals = location.querySelectorAll("li.preiod-name");
                         meals.forEach(meal => {
-                            const mealName = meal.querySelector("span").textContent.trim().replace("Fall - ", "");
+                            const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
                             const recipes = meal.querySelectorAll("li.recip");
                             recipes.forEach(recipe => {
-                                const recipeName = recipe.querySelector("span").textContent.trim();
+                                const recipeName = recipe.querySelector("span")?.textContent.trim();
                                 for (const food of favoriteFoods) {
-                                    if (recipeName.toLowerCase().includes(food)) {
+                                    if (recipeName && recipeName.toLowerCase().includes(food)) {
                                         foundItems.push({ recipe: recipeName, location: locationName, meal: mealName });
                                         break;
                                     }
@@ -110,7 +107,6 @@
                 return foundItems;
             }
 
-            // --- DISPLAY FUNCTIONS ---
             function displayTodaysResults(foundItems) {
                 resultsContainer.classList.remove('hidden');
                 resultsList.innerHTML = '';
@@ -126,17 +122,12 @@
                 }
             }
             
-            function displayUpcomingResults(data, favoriteFoods, targetLocations) {
+            function displayUpcomingResults(date, foundItems) {
                 upcomingContainer.classList.remove('hidden');
                 upcomingList.innerHTML = '';
-
-                if (data.success) {
-                    upcomingTitle.innerHTML = `But they're coming up soon! <br> Next available on <span class="text-blue-600 font-bold">${data.date}</span>:`;
-                    const upcomingItems = parseHtmlForMenu(data.html, favoriteFoods, targetLocations);
-                    upcomingItems.forEach(item => { const li = document.createElement('li'); li.className = 'p-3 bg-white border border-gray-200 rounded-lg shadow-sm'; li.innerHTML = `<p class="font-semibold text-gray-800">${item.recipe}</p><p class="text-sm text-gray-500">${item.location} for ${item.meal}</p>`; upcomingList.appendChild(li); });
-                } else {
-                    upcomingTitle.textContent = "Nothing found on the menu for the next 7 days.";
-                }
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                upcomingTitle.innerHTML = `But they're coming up soon! <br> Next available on <span class="text-blue-600 font-bold">${dayName}</span>:`;
+                foundItems.forEach(item => { const li = document.createElement('li'); li.className = 'p-3 bg-white border border-gray-200 rounded-lg shadow-sm'; li.innerHTML = `<p class="font-semibold text-gray-800">${item.recipe}</p><p class="text-sm text-gray-500">${item.location} for ${item.meal}</p>`; upcomingList.appendChild(li); });
             }
 
             async function checkMenu() {
@@ -150,12 +141,11 @@
                 
                 if (favoriteFoods.length === 0 || targetLocations.length === 0) {
                     alert("Please enter at least one favorite food and select a dining hall.");
-                    showLoading(false);
-                    return;
+                    showLoading(false); return;
                 }
 
-                // --- STEP 1: Check Today's Menu ---
                 try {
+                    // STEP 1: Check Today
                     const today = new Date();
                     const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
                     const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
@@ -163,19 +153,41 @@
                     const htmlText = await res.text();
                     const todaysItems = parseHtmlForMenu(htmlText, favoriteFoods, targetLocations);
                     
-                    const foundToday = displayTodaysResults(todaysItems);
-                    
-                    if (foundToday) {
-                        showLoading(false);
-                        return; // Found food today, so we're done!
+                    if (displayTodaysResults(todaysItems)) {
+                        showLoading(false); return; // Found food today, so we're done!
                     }
 
-                    // --- STEP 2: If nothing today, check the week ---
-                    showLoading(true, "Checking the week...");
-                    const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods, targetLocations }) });
-                    if (!weekRes.ok) throw new Error('Server error checking weekly menu.');
-                    const weekData = await weekRes.json();
-                    displayUpcomingResults(weekData, favoriteFoods, targetLocations);
+                    // STEP 2: If nothing, check the next 7 days
+                    showLoading(true, "Searching the week...");
+                    const futureDates = [];
+                    for (let i = 1; i <= 7; i++) {
+                        const date = new Date();
+                        date.setDate(date.getDate() + i);
+                        futureDates.push(`${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`);
+                    }
+
+                    const batchRes = await fetch('/api/menu/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dates: futureDates }) });
+                    if (!batchRes.ok) throw new Error('Server error checking weekly menu.');
+                    const weeklyData = await batchRes.json();
+
+                    let foundUpcoming = false;
+                    for (let i = 0; i < futureDates.length; i++) {
+                        const dateStr = futureDates[i];
+                        const html = weeklyData[dateStr];
+                        const items = parseHtmlForMenu(html, favoriteFoods, targetLocations);
+                        if (items.length > 0) {
+                            const dateObj = new Date(parseInt(dateStr.substring(0, 4)), parseInt(dateStr.substring(4, 6)) - 1, parseInt(dateStr.substring(6, 8)));
+                            displayUpcomingResults(dateObj, items);
+                            foundUpcoming = true;
+                            break; // Stop on the first day we find a match
+                        }
+                    }
+
+                    if (!foundUpcoming) {
+                        upcomingContainer.classList.remove('hidden');
+                        upcomingTitle.textContent = "Nothing found on the menu for the next 7 days.";
+                        upcomingList.innerHTML = '';
+                    }
 
                 } catch (error) {
                     console.error("Fetch Error:", error);
@@ -187,7 +199,6 @@
                 }
             }
 
-            // --- INITIALIZATION ---
             populateLocations();
             loadPreferences();
             checkMenuBtn.addEventListener('click', checkMenu);
