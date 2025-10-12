@@ -33,26 +33,19 @@
                     <div id="locations-container" class="grid grid-cols-2 gap-x-4 gap-y-2"></div>
                 </div>
             </div>
-            <div class="p-6 space-y-3 sm:space-y-0 sm:flex sm:space-x-3">
-                <button id="find-favorites-btn" class="w-full sm:w-1/2 bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
+            <div class="p-6">
+                <button id="check-menu-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    <span>Find My Favorites</span>
-                </button>
-                <button id="view-full-menu-btn" class="w-full sm:w-1/2 bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-transform transform active:scale-95 flex items-center justify-center border border-gray-300">
-                    <svg class="w-5 h-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v1H4V6zm0 3h12v1H4V9zm0 3h12v1H4v-1z" /></svg>
-                    <span>View Full Menu</span>
+                    <span>Check Today's Menu</span>
                 </button>
             </div>
             
-            <div id="loading-container" class="p-6 text-center text-gray-500 hidden">
+            <div id="loading-container" class="p-6 text-center text-gray-500 hidden border-t">
                  <svg class="animate-spin mx-auto h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                 <p id="loading-text" class="mt-2 text-sm"></p>
+                 <p id="loading-text" class="mt-2 text-sm">Checking...</p>
             </div>
 
-            <div id="results-container" class="p-6 bg-gray-50 hidden border-t">
-                <h2 id="results-title" class="text-xl font-bold mb-4 text-gray-800"></h2>
-                <div id="results-content" class="space-y-4"></div>
-            </div>
+            <div id="results-container" class="p-6 bg-gray-50 hidden border-t"></div>
         </div>
         <p class="text-center text-xs text-gray-400 mt-6">Created with ❤️</p>
     </div>
@@ -65,13 +58,10 @@
             const UIElements = {
                 foodsInput: getEl('favorite-foods'),
                 locationsContainer: getEl('locations-container'),
-                findFavBtn: getEl('find-favorites-btn'),
-                viewMenuBtn: getEl('view-full-menu-btn'),
+                checkMenuBtn: getEl('check-menu-btn'),
                 loadingContainer: getEl('loading-container'),
                 loadingText: getEl('loading-text'),
                 resultsContainer: getEl('results-container'),
-                resultsTitle: getEl('results-title'),
-                resultsContent: getEl('results-content'),
             };
 
             const populateLocations = () => { ALL_LOCATIONS.forEach(loc => { const div = document.createElement('div'); div.className = 'flex items-center'; div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; UIElements.locationsContainer.appendChild(div); }); };
@@ -79,165 +69,77 @@
             const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { UIElements.foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
             const showLoading = (isLoading, text = 'Checking...') => { UIElements.loadingContainer.classList.toggle('hidden', !isLoading); UIElements.resultsContainer.classList.add('hidden'); UIElements.loadingText.textContent = text; };
 
-            function parseHtml(htmlText, targetLocations) {
-                if (!htmlText) return {};
+            function parseAndFindFavorites(htmlText, favoriteFoods, targetLocations) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(htmlText, 'text/html');
-                const menuByLocation = {};
+                const foundItems = [];
                 
                 doc.querySelectorAll("li.location-name").forEach(location => {
                     const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
                     if (locationName && targetLocations.includes(locationName)) {
-                        menuByLocation[locationName] = {};
-                         // Check for both the old typo 'preiod' and the correct 'period'
                         location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
-                            // --- THE CRITICAL FIX ---
-                            // Check for both the old typo 'recip' and the correct 'recipe'
-                            const recipes = Array.from(meal.querySelectorAll("li.recip span, li.recipe span")).map(span => span.textContent.trim());
-                            if (mealName && recipes.length > 0) {
-                                menuByLocation[locationName][mealName] = recipes;
-                            }
+                            meal.querySelectorAll("li.recip span, li.recipe span").forEach(recipeSpan => {
+                                const recipeName = recipeSpan.textContent.trim();
+                                if (favoriteFoods.some(food => recipeName.toLowerCase().includes(food))) {
+                                    foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
+                                }
+                            });
                         });
                     }
                 });
-                return menuByLocation;
+                return [...new Set(foundItems)]; // Return unique items
             }
 
-            function displayFavoritesResults(results) {
-                UIElements.resultsTitle.textContent = "Upcoming Favorites Report";
-                UIElements.resultsContent.innerHTML = '';
-                Object.entries(results).forEach(([food, info]) => {
-                    const foodCard = document.createElement('div');
-                    foodCard.className = 'p-4 bg-white rounded-lg border';
-                    let content;
-                    if (info.found) {
-                        const dayName = info.date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
-                        content = `
-                            <p class="font-bold text-gray-800 capitalize">${food}</p>
-                            <p class="text-sm text-gray-500">Next available on <span class="font-semibold text-blue-600">${dayName}</span></p>
-                            <ul class="mt-2 space-y-1 text-sm list-disc list-inside">
-                                ${info.items.map(item => `<li><span class="font-semibold">${item.recipe}</span> at ${item.location} (${item.meal})</li>`).join('')}
-                            </ul>`;
-                        foodCard.classList.add('border-blue-200');
-                    } else {
-                        content = `<p class="font-bold text-gray-800 capitalize">${food}</p><p class="text-sm text-gray-500">Not found on the menu in the next 7 days.</p>`;
-                        foodCard.classList.add('border-gray-200', 'opacity-70');
-                    }
-                    foodCard.innerHTML = content;
-                    UIElements.resultsContent.appendChild(foodCard);
-                });
+            function displayResults(title, content) {
+                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">${title}</h2><div>${content}</div>`;
+                UIElements.resultsContainer.classList.remove('hidden');
             }
 
-            function displayFullMenuResults(menu, favoriteFoods) {
-                UIElements.resultsTitle.textContent = "Today's Full Menu";
-                UIElements.resultsContent.innerHTML = '';
-                if (Object.keys(menu).length === 0 || Object.values(menu).every(meals => Object.keys(meals).length === 0)) {
-                    UIElements.resultsContent.innerHTML = `<p class="text-gray-600">No menu information could be found for the selected dining halls today. They may be closed or the menu has not been posted yet.</p>`;
-                    return;
-                }
-                Object.entries(menu).forEach(([location, meals]) => {
-                    const locationDiv = document.createElement('div');
-                    let mealHtml = Object.entries(meals).map(([meal, recipes]) => `
-                        <h4 class="font-semibold text-gray-700 mt-3">${meal}</h4>
-                        <ul class="mt-1 space-y-1 text-sm list-disc list-inside">
-                            ${recipes.map(recipe => {
-                                const isFavorite = favoriteFoods.some(fav => recipe.toLowerCase().includes(fav));
-                                return `<li class="${isFavorite ? 'font-bold bg-green-100 text-green-800 rounded-md p-1' : 'text-gray-700'}">${recipe}</li>`;
-                            }).join('')}
-                        </ul>
-                    `).join('');
-                    if (mealHtml.trim() !== '') {
-                        locationDiv.innerHTML = `<h3 class="text-lg font-bold text-blue-700 border-b pb-1">${location}</h3>${mealHtml}`;
-                        UIElements.resultsContent.appendChild(locationDiv);
-                    }
-                });
-            }
-
-            async function findFavorites() {
+            async function checkMenu() {
                 savePreferences();
                 const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim().toLowerCase()).filter(f => f);
                 const targetLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
-                if (favoriteFoods.length === 0 || targetLocations.length === 0) { alert("Please enter favorites and select a dining hall."); return; }
-                
-                showLoading(true, "Searching the week for all your favorites...");
-                
-                try {
-                    const futureDates = [];
-                    const dateObjs = [];
-                    for (let i = 0; i < 8; i++) { // Today + next 7 days
-                        const date = new Date();
-                        date.setDate(date.getDate() + i);
-                        dateObjs.push(date);
-                        futureDates.push(`${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`);
-                    }
 
-                    const res = await fetch('/api/menu/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dates: futureDates }) });
-                    if (!res.ok) throw new Error('Server error fetching weekly data.');
-                    const weeklyData = await res.json();
-
-                    let results = favoriteFoods.reduce((acc, food) => ({...acc, [food]: {found: false, items: []}}), {});
-
-                    futureDates.forEach((dateStr, index) => {
-                        const menuByLocation = parseHtml(weeklyData[dateStr], targetLocations);
-                        Object.entries(menuByLocation).forEach(([location, meals]) => {
-                            Object.entries(meals).forEach(([meal, recipes]) => {
-                                recipes.forEach(recipe => {
-                                    favoriteFoods.forEach(food => {
-                                        if (recipe.toLowerCase().includes(food)) {
-                                            if (!results[food].found) { // First time we find this food
-                                                results[food].found = true;
-                                                results[food].date = dateObjs[index];
-                                            }
-                                            // Only add if it's on the first day we found it
-                                            if (results[food].date.toDateString() === dateObjs[index].toDateString()) {
-                                                results[food].items.push({ recipe, location, meal });
-                                            }
-                                        }
-                                    });
-                                });
-                            });
-                        });
-                    });
-                    
-                    UIElements.resultsContainer.classList.remove('hidden');
-                    displayFavoritesResults(results);
-
-                } catch(e) {
-                    console.error(e);
-                    UIElements.resultsContainer.classList.remove('hidden');
-                    UIElements.resultsTitle.textContent = "Error";
-                    UIElements.resultsContent.textContent = "Could not fetch menu data from the server.";
-                } finally {
-                    showLoading(false);
+                if (favoriteFoods.length === 0 || targetLocations.length === 0) {
+                    alert("Please enter at least one favorite food and select a dining hall.");
+                    return;
                 }
-            }
 
-            async function viewFullMenu() {
-                savePreferences();
-                const targetLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
-                if (targetLocations.length === 0) { alert("Please select a dining hall."); return; }
-                
-                showLoading(true, "Fetching today's full menu...");
+                showLoading(true, "Checking today's menu...");
 
                 try {
                     const today = new Date();
                     const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+
                     const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
-                    if (!res.ok) throw new Error('Server error fetching today\'s menu.');
+                    if (!res.ok) throw new Error('Could not connect to the dining hall server.');
                     const htmlText = await res.text();
-                    
-                    const fullMenu = parseHtml(htmlText, targetLocations);
-                    const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim().toLowerCase()).filter(f => f);
 
-                    UIElements.resultsContainer.classList.remove('hidden');
-                    displayFullMenuResults(fullMenu, favoriteFoods);
+                    const foundToday = parseAndFindFavorites(htmlText, favoriteFoods, targetLocations);
 
-                } catch(e) {
+                    if (foundToday.length > 0) {
+                        displayResults("Great news! Found on the menu today: 🌮", `<ul class="space-y-2 list-disc list-inside">${foundToday.join('')}</ul>`);
+                    } else {
+                        showLoading(true, "Not found today. Checking the rest of the week...");
+                        const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods, targetLocations }) });
+                        if (!weekRes.ok) throw new Error('Could not search the week.');
+                        
+                        const weekResult = await weekRes.json();
+                        if (weekResult.found) {
+                            const foundLater = parseAndFindFavorites(weekResult.menuHtml, favoriteFoods, targetLocations);
+                            const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                            displayResults(
+                                "Not today, but coming up soon! 😊",
+                                `<p class="mb-3">The next available day is <strong>${dayName}</strong>:</p><ul class="space-y-2 list-disc list-inside">${foundLater.join('')}</ul>`
+                            );
+                        } else {
+                            displayResults("Sorry... 😔", "<p>None of your favorites were found on the menu for the next 7 days.</p>");
+                        }
+                    }
+                } catch (e) {
                     console.error(e);
-                    UIElements.resultsContainer.classList.remove('hidden');
-                    UIElements.resultsTitle.textContent = "Error";
-                    UIElements.resultsContent.textContent = "Could not fetch menu data from the server.";
+                    displayResults("Error fetching menu.", `<p class="text-red-600">Could not connect to the dining hall server. This is likely due to a browser security policy (CORS). This app may need to be run from a server with a proxy to work correctly.</p>`);
                 } finally {
                     showLoading(false);
                 }
@@ -245,8 +147,7 @@
 
             populateLocations();
             loadPreferences();
-            UIElements.findFavBtn.addEventListener('click', findFavorites);
-            UIElements.viewMenuBtn.addEventListener('click', viewFullMenu);
+            UIElements.checkMenuBtn.addEventListener('click', checkMenu);
         });
     </script>
 </body>
