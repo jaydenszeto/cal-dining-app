@@ -45,7 +45,7 @@
             </div>
             
             <div id="loading-container" class="p-6 text-center text-gray-500 hidden">
-                 <svg class="animate-spin mx-auto h-8 w-8 text-blue-600" xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                 <svg class="animate-spin mx-auto h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                  <p id="loading-text" class="mt-2 text-sm"></p>
             </div>
 
@@ -61,7 +61,6 @@
         document.addEventListener('DOMContentLoaded', () => {
             const ALL_LOCATIONS = ["Crossroads", "Cafe 3", "Foothill", "Clark Kerr Campus"];
             
-            // --- ELEMENT GRABBER ---
             const getEl = (id) => document.getElementById(id);
             const UIElements = {
                 foodsInput: getEl('favorite-foods'),
@@ -75,13 +74,11 @@
                 resultsContent: getEl('results-content'),
             };
 
-            // --- UI & PREFERENCE HELPERS ---
             const populateLocations = () => { ALL_LOCATIONS.forEach(loc => { const div = document.createElement('div'); div.className = 'flex items-center'; div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; UIElements.locationsContainer.appendChild(div); }); };
             const savePreferences = () => { const favs = UIElements.foodsInput.value.trim(); const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); localStorage.setItem('diningPrefs', JSON.stringify({ favoriteFoods: favs, selectedLocations: locs })); };
             const loadPreferences = () => { const p = JSON.parse(localStorage.getItem('diningPrefs')); if (p) { UIElements.foodsInput.value = p.favoriteFoods || ''; if (p.selectedLocations) { p.selectedLocations.forEach(loc => { const cb = document.querySelector(`input[value="${loc}"]`); if (cb) cb.checked = true; }); } } };
             const showLoading = (isLoading, text = 'Checking...') => { UIElements.loadingContainer.classList.toggle('hidden', !isLoading); UIElements.resultsContainer.classList.add('hidden'); UIElements.loadingText.textContent = text; };
 
-            // --- MENU PARSING LOGIC ---
             function parseHtml(htmlText, targetLocations) {
                 if (!htmlText) return {};
                 const parser = new DOMParser();
@@ -92,7 +89,8 @@
                     const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
                     if (targetLocations.includes(locationName)) {
                         menuByLocation[locationName] = {};
-                        location.querySelectorAll("li.preiod-name").forEach(meal => {
+                        // --- FIX: Check for both the typo 'preiod' and corrected 'period' ---
+                        location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
                             const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
                             const recipes = Array.from(meal.querySelectorAll("li.recip span")).map(span => span.textContent.trim());
                             if (recipes.length > 0) menuByLocation[locationName][mealName] = recipes;
@@ -102,7 +100,6 @@
                 return menuByLocation;
             }
 
-            // --- DISPLAY LOGIC ---
             function displayFavoritesResults(results) {
                 UIElements.resultsTitle.textContent = "Upcoming Favorites Report";
                 UIElements.resultsContent.innerHTML = '';
@@ -151,7 +148,6 @@
                 });
             }
 
-            // --- CORE APP LOGIC ---
             async function findFavorites() {
                 savePreferences();
                 const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim().toLowerCase()).filter(f => f);
@@ -182,8 +178,14 @@
                             Object.entries(meals).forEach(([meal, recipes]) => {
                                 recipes.forEach(recipe => {
                                     favoriteFoods.forEach(food => {
-                                        if (!results[food].found && recipe.toLowerCase().includes(food)) {
-                                            results[food] = { found: true, date: dateObjs[index], items: [{ recipe, location, meal }] };
+                                        // --- FIX: Logic to correctly gather all items on the first day a food is found ---
+                                        if (recipe.toLowerCase().includes(food)) {
+                                            if (!results[food].found) { // First time we've ever seen this food
+                                                results[food] = { found: true, date: dateObjs[index], items: [{ recipe, location, meal }] };
+                                            } else if (results[food].date.toDateString() === dateObjs[index].toDateString()) {
+                                                // It's another match on the same day we already found it, so add it
+                                                results[food].items.push({ recipe, location, meal });
+                                            }
                                         }
                                     });
                                 });
@@ -234,7 +236,6 @@
                 }
             }
 
-            // --- INITIALIZATION ---
             populateLocations();
             loadPreferences();
             UIElements.findFavBtn.addEventListener('click', findFavorites);
