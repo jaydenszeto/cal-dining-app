@@ -76,36 +76,36 @@
                 }
             };
 
-            function displayReport(results) {
+            function displayReport(report) {
                 let htmlContent = '';
-                results.forEach(result => {
-                    switch(result.status) {
-                        case 'today':
-                            htmlContent += `<div class="p-4 bg-green-100 rounded-lg">
-                                <p class="font-bold text-green-800">✅ Great news! Found "${result.food}" today:</p>
-                                <ul class="mt-2 space-y-1 list-disc list-inside text-green-700">${result.details}</ul>
-                            </div>`;
-                            break;
-                        case 'upcoming':
-                            const dayName = new Date(result.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
-                            htmlContent += `<div class="p-4 bg-yellow-100 rounded-lg">
-                                <p class="font-bold text-yellow-800">🗓️ Found "${result.food}" coming up on <strong>${dayName}</strong>:</p>
-                                <ul class="mt-2 space-y-1 list-disc list-inside text-yellow-700">${result.details}</ul>
-                            </div>`;
-                            break;
-                        case 'not_found':
-                            htmlContent += `<div class="p-4 bg-red-100 rounded-lg">
-                                <p class="font-bold text-red-800">❌ Sorry, "${result.food}" was not found on the menu for the next 7 days.</p>
-                            </div>`;
-                            break;
+                
+                report.forEach(result => {
+                    const foodName = result.food.charAt(0).toUpperCase() + result.food.slice(1);
+                    
+                    htmlContent += `<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                                      <h3 class="text-lg font-semibold text-gray-900">${foodName}</h3>`;
+
+                    if (result.found_days.length === 0) {
+                        htmlContent += `<p class="mt-2 text-gray-500">Not found on the menu for the next 7 days.</p>`;
+                    } else {
+                        let dailyList = '<ul class="mt-2 divide-y divide-gray-200">';
+                        result.found_days.forEach(dayInfo => {
+                            const dayName = new Date(dayInfo.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+                            dailyList += `<li class="py-3">
+                                            <p class="font-medium text-gray-800">${dayName}:</p>
+                                            <ul class="mt-2 pl-4 space-y-1 list-disc list-inside text-gray-600">${dayInfo.details}</ul>
+                                          </li>`;
+                        });
+                        dailyList += '</ul>';
+                        htmlContent += dailyList;
                     }
+                    htmlContent += `</div>`;
                 });
 
                 UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Menu Report</h2><div class="space-y-4">${htmlContent}</div>`;
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
-            // This function now makes one call to the powerful server endpoint and displays the results.
             async function checkMenu() {
                 savePreferences();
                 const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim()).filter(f => f);
@@ -149,3 +149,4 @@
     </script>
 </body>
 </html>
+
