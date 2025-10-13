@@ -26,7 +26,7 @@ async function fetchMenuForDate(dateStr) {
             body: formData,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
-        if (!response.ok) return null; // Return null on error
+        if (!response.ok) return null;
         return await response.text();
     } catch (error) {
         console.error(`Error fetching for ${dateStr}:`, error);
@@ -34,7 +34,105 @@ async function fetchMenuForDate(dateStr) {
     }
 }
 
-// --- Endpoint to check today's menu ---
+/**
+ * A simple, dependency-free HTML parser that runs on the server.
+ * It finds all occurrences of a specific food within the menus of target locations.
+ * @param {string} htmlText - The raw HTML from the dining site.
+ * @param {string} food - The single food keyword to search for (e.g., "curry").
+ * @param {string[]} targetLocations - An array of dining hall names (e.g., ["Crossroads"]).
+ * @returns {string[]} An array of formatted HTML list items for display.
+ */
+function findFoodInHtml(htmlText, food, targetLocations) {
+    const foundItems = [];
+    const lowerCaseHtml = htmlText.toLowerCase();
+    
+    for (const location of targetLocations) {
+        let currentIndex = 0;
+        const locationMarker = `<span class="cafe-title">${location}</span>`.toLowerCase();
+
+        // Find each instance of the location on the page
+        while ((currentIndex = lowerCaseHtml.indexOf(locationMarker, currentIndex)) !== -1) {
+            const endOfLocationBlock = lowerCaseHtml.indexOf('<li class="location-name"', currentIndex + 1);
+            const locationHtml = htmlText.substring(currentIndex, endOfLocationBlock === -1 ? undefined : endOfLocationBlock);
+            
+            const mealRegex = /<li class="preiod-name.*?<span>(.*?)<\/span>.*?<\/li>/gs;
+            let mealMatch;
+            while ((mealMatch = mealRegex.exec(locationHtml)) !== null) {
+                const mealName = mealMatch[1].replace(/Fall - /g, '').replace(/<span.*/, '').trim();
+                const mealHtml = mealMatch[0];
+
+                const recipeRegex = /<li class="recip.*?<span>(.*?)<\/span>/g;
+                let recipeMatch;
+                while ((recipeMatch = recipeRegex.exec(mealHtml)) !== null) {
+                    const recipeName = recipeMatch[1].trim();
+                    if (recipeName.toLowerCase().includes(food.toLowerCase())) {
+                        foundItems.push(`<li><strong>${recipeName}</strong> at ${location} (${mealName})</li>`);
+                    }
+                }
+            }
+            currentIndex = currentIndex + locationMarker.length;
+        }
+    }
+    return [...new Set(foundItems)]; // Return unique items
+}
+
+// ✅ NEW: The primary endpoint to handle the entire weekly lookup
+app.post('/api/menu/full-week-report', async (req, res) => {
+    try {
+        const { favoriteFoods, targetLocations } = req.body;
+        if (!favoriteFoods || !targetLocations) {
+            return res.status(400).json({ error: 'favoriteFoods and targetLocations are required.' });
+        }
+        
+        const results = [];
+        const foundFoods = new Set();
+
+        // Loop through the next 8 days (today + 7 more)
+        for (let i = 0; i < 8; i++) {
+            // If we've found every food, we can stop early.
+            if (foundFoods.size === favoriteFoods.length) break;
+
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+            const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+            
+            const menuHtml = await fetchMenuForDate(dateStr);
+            if (!menuHtml) continue;
+
+            // Check for any foods we haven't found yet
+            for (const food of favoriteFoods) {
+                if (!foundFoods.has(food)) {
+                    const items = findFoodInHtml(menuHtml, food, targetLocations);
+                    if (items.length > 0) {
+                        results.push({
+                            food: food,
+                            status: i === 0 ? 'today' : 'upcoming',
+                            date: date,
+                            details: items.join('')
+                        });
+                        foundFoods.add(food);
+                    }
+                }
+            }
+        }
+
+        // For any foods that were never found, add a "not_found" status
+        for (const food of favoriteFoods) {
+            if (!foundFoods.has(food)) {
+                results.push({ food: food, status: 'not_found' });
+            }
+        }
+
+        res.json(results);
+
+    } catch (error) {
+        console.error('Error in /api/menu/full-week-report:', error);
+        res.status(500).json({ error: 'Failed to generate weekly menu report.' });
+    }
+});
+
+
+// --- Old endpoints are no longer used by the new frontend but are kept for reference ---
 app.post('/api/menu', async (req, res) => {
     try {
         const { date } = req.body;
@@ -45,73 +143,7 @@ app.post('/api/menu', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch menu data.' });
     }
 });
-
-// --- Endpoint to find the NEXT available day in the week (CORRECTED LOGIC) ---
-app.post('/api/menu/week', async (req, res) => {
-    try {
-        const { favoriteFoods, targetLocations } = req.body;
-        if (!favoriteFoods || !targetLocations) {
-            return res.status(400).json({ error: 'favoriteFoods and targetLocations are required.' });
-        }
-
-        for (let i = 1; i <= 7; i++) { // Check tomorrow through next 7 days
-            const date = new Date();
-            date.setDate(date.getDate() + i);
-            const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-            
-            const menuHtml = await fetchMenuForDate(dateStr);
-            if (!menuHtml) continue;
-
-            const menuText = menuHtml.toLowerCase();
-
-            // This flag will be set to true if we find a food at a specified location.
-            let hasMatch = false;
-
-            // Loop through each location the user selected.
-            for (const location of targetLocations) {
-                const locationIndex = menuText.indexOf(location.toLowerCase());
-
-                // If the location isn't on the menu for this day, skip it.
-                if (locationIndex === -1) {
-                    continue;
-                }
-                
-                // Find the end of this location's menu section by looking for the start of the next one.
-                const nextLocationHeader = '<li class="location-name">';
-                const nextLocationIndex = menuText.indexOf(nextLocationHeader, locationIndex + 1);
-
-                // Define the specific chunk of HTML for this one location's menu.
-                const searchChunk = nextLocationIndex !== -1 
-                    ? menuText.substring(locationIndex, nextLocationIndex) 
-                    : menuText.substring(locationIndex);
-                
-                // Now, only search for the favorite food within that location's chunk.
-                for (const food of favoriteFoods) {
-                    if (searchChunk.includes(food.toLowerCase())) {
-                        hasMatch = true;
-                        break; // Found a food, no need to check other foods for this location
-                    }
-                }
-
-                if (hasMatch) {
-                    break; // Found a match, no need to check other locations
-                }
-            }
-
-            // If we found a valid match, return the data and stop looping.
-            if (hasMatch) {
-                return res.json({ found: true, date, menuHtml });
-            }
-        }
-
-        // If the loop completes without finding anything.
-        res.json({ found: false });
-
-    } catch (error) {
-        console.error('Error in /api/menu/week:', error);
-        res.status(500).json({ error: 'Failed to search weekly menu.' });
-    }
-});
+app.post('/api/menu/week', async (req, res) => res.status(404).json({error: 'This endpoint is deprecated.'}));
 
 
 app.listen(PORT, () => {
