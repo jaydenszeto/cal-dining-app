@@ -76,36 +76,36 @@
                 }
             };
 
-            function parseAndFindFavorites(htmlText, favoriteFoods, targetLocations) {
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlText, 'text/html');
-                const foundItems = [];
-                doc.querySelectorAll("li.location-name").forEach(location => {
-                    const locationName = location.querySelector("span.cafe-title")?.textContent.trim();
-                    if (locationName && targetLocations.includes(locationName)) {
-                        location.querySelectorAll("li.preiod-name, li.period-name").forEach(meal => {
-                            const mealName = meal.querySelector("span")?.textContent.trim().replace("Fall - ", "");
-                            meal.querySelectorAll("li.recip").forEach(recipeItem => {
-                                const recipeNameSpan = recipeItem.querySelector("span");
-                                if (recipeNameSpan) {
-                                    const recipeName = recipeNameSpan.textContent.trim();
-                                    if (recipeName && favoriteFoods.some(food => recipeName.toLowerCase().includes(food.toLowerCase()))) {
-                                        foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
-                                    }
-                                }
-                            });
-                        });
+            function displayReport(results) {
+                let htmlContent = '';
+                results.forEach(result => {
+                    switch(result.status) {
+                        case 'today':
+                            htmlContent += `<div class="p-4 bg-green-100 rounded-lg">
+                                <p class="font-bold text-green-800">✅ Great news! Found "${result.food}" today:</p>
+                                <ul class="mt-2 space-y-1 list-disc list-inside text-green-700">${result.details}</ul>
+                            </div>`;
+                            break;
+                        case 'upcoming':
+                            const dayName = new Date(result.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
+                            htmlContent += `<div class="p-4 bg-yellow-100 rounded-lg">
+                                <p class="font-bold text-yellow-800">🗓️ Found "${result.food}" coming up on <strong>${dayName}</strong>:</p>
+                                <ul class="mt-2 space-y-1 list-disc list-inside text-yellow-700">${result.details}</ul>
+                            </div>`;
+                            break;
+                        case 'not_found':
+                            htmlContent += `<div class="p-4 bg-red-100 rounded-lg">
+                                <p class="font-bold text-red-800">❌ Sorry, "${result.food}" was not found on the menu for the next 7 days.</p>
+                            </div>`;
+                            break;
                     }
                 });
-                return [...new Set(foundItems)];
-            }
 
-            function displayResults(title, content) {
-                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">${title}</h2><div class="space-y-4">${content}</div>`;
+                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Menu Report</h2><div class="space-y-4">${htmlContent}</div>`;
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
-            // ✅ NEW: Main function to handle individual food lookups
+            // This function now makes one call to the powerful server endpoint and displays the results.
             async function checkMenu() {
                 savePreferences();
                 const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim()).filter(f => f);
@@ -116,62 +116,30 @@
                     return;
                 }
 
-                showLoading(true, "Checking menus...");
+                showLoading(true, "Scanning the week's menus...");
 
                 try {
-                    // Create a list of promises, one for each food to check
-                    const checkPromises = favoriteFoods.map(food => findNextAvailable(food, targetLocations));
+                    const res = await fetch('/api/menu/full-week-report', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ favoriteFoods, targetLocations }) 
+                    });
                     
-                    // Wait for all the checks to complete
-                    const results = await Promise.all(checkPromises);
-
-                    displayResults("Menu Report", results.join(''));
+                    if (!res.ok) {
+                         const errorData = await res.json();
+                         throw new Error(errorData.error || 'Failed to get menu report from server.');
+                    }
+                    
+                    const report = await res.json();
+                    displayReport(report);
 
                 } catch (e) {
                     console.error(e);
-                    displayResults("Error", `<p class="text-red-600">Could not connect to the dining hall server. Please try again later.</p>`);
+                    UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Error</h2><p class="text-red-600">Could not connect to the dining hall server. Please try again later.</p>`;
+                    UIElements.resultsContainer.classList.remove('hidden');
                 } finally {
                     showLoading(false);
                 }
-            }
-            
-            // ✅ NEW: Helper function to find the next date for a SINGLE food
-            async function findNextAvailable(food, targetLocations) {
-                // First, check today
-                const today = new Date();
-                const dateStr = `${today.getFullYear()}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
-                
-                const res = await fetch('/api/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ date: dateStr }) });
-                if (!res.ok) throw new Error('Server connection failed.');
-                
-                const htmlText = await res.text();
-                const foundToday = parseAndFindFavorites(htmlText, [food], targetLocations);
-
-                if (foundToday.length > 0) {
-                    return `<div class="p-4 bg-green-100 rounded-lg">
-                                <p class="font-bold text-green-800">✅ Great news! Found "${food}" today:</p>
-                                <ul class="mt-2 space-y-1 list-disc list-inside text-green-700">${foundToday.join('')}</ul>
-                            </div>`;
-                }
-
-                // If not found today, check the rest of the week
-                const weekRes = await fetch('/api/menu/week', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ favoriteFoods: [food], targetLocations }) });
-                if (!weekRes.ok) throw new Error('Weekly search failed.');
-
-                const weekResult = await weekRes.json();
-                if (weekResult.found) {
-                    const foundLater = parseAndFindFavorites(weekResult.menuHtml, [food], targetLocations);
-                    const dayName = new Date(weekResult.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
-                    return `<div class="p-4 bg-yellow-100 rounded-lg">
-                                <p class="font-bold text-yellow-800">🗓️ Found "${food}" coming up on <strong>${dayName}</strong>:</p>
-                                <ul class="mt-2 space-y-1 list-disc list-inside text-yellow-700">${foundLater.join('')}</ul>
-                            </div>`;
-                }
-
-                // If not found at all
-                return `<div class="p-4 bg-red-100 rounded-lg">
-                            <p class="font-bold text-red-800">❌ Sorry, "${food}" was not found on the menu for the next 7 days.</p>
-                        </div>`;
             }
 
             populateLocations();
