@@ -33,40 +33,59 @@ async function fetchMenuForDate(dateStr) {
     }
 }
 
+/**
+ * ✅ NEW: A more robust, server-side HTML parser.
+ * This version correctly isolates each location's menu before searching,
+ * preventing data from one location being attributed to another. It also
+ * filters out long descriptions that are not actual menu items.
+ */
 function findFoodInHtml(htmlText, food, targetLocations) {
     const foundItems = [];
-    const lowerCaseHtml = htmlText.toLowerCase();
-    
-    for (const location of targetLocations) {
-        let currentIndex = 0;
-        const locationMarker = `<span class="cafe-title">${location}</span>`.toLowerCase();
+    // Split the entire menu by the main location list item tag.
+    // This gives us a chunk of HTML for each location.
+    const locationBlocks = htmlText.split('<li class="location-name');
 
-        while ((currentIndex = lowerCaseHtml.indexOf(locationMarker, currentIndex)) !== -1) {
-            const endOfLocationBlock = lowerCaseHtml.indexOf('<li class="location-name"', currentIndex + 1);
-            const locationHtml = htmlText.substring(currentIndex, endOfLocationBlock === -1 ? undefined : endOfLocationBlock);
-            
-            const mealRegex = /<li class="preiod-name.*?<span>(.*?)<\/span>.*?<\/li>/gs;
-            let mealMatch;
-            while ((mealMatch = mealRegex.exec(locationHtml)) !== null) {
-                const mealName = mealMatch[1].replace(/Fall - /g, '').replace(/<span.*/, '').trim();
-                const mealHtml = mealMatch[0];
+    for (const block of locationBlocks) {
+        if (!block) continue; // First item from split is usually empty
 
-                const recipeRegex = /<li class="recip.*?<span>(.*?)<\/span>/g;
-                let recipeMatch;
-                while ((recipeMatch = recipeRegex.exec(mealHtml)) !== null) {
-                    const recipeName = recipeMatch[1].trim();
-                    if (recipeName.toLowerCase().includes(food.toLowerCase())) {
-                        foundItems.push(`<li><strong>${recipeName}</strong> at ${location} (${mealName})</li>`);
+        // Find the name of the location within this block
+        const titleMatch = block.match(/<span class="cafe-title">(.*?)<\/span>/);
+        if (!titleMatch || !titleMatch[1]) continue;
+        const locationName = titleMatch[1].trim();
+
+        // If this block isn't for a location the user selected, skip it entirely.
+        if (!targetLocations.includes(locationName)) {
+            continue;
+        }
+
+        // Now, we are ONLY searching within the correct location's HTML block.
+        // Split this location's content by meal periods (Brunch, Dinner, etc.)
+        const mealBlocks = block.split('<li class="preiod-name');
+        for (const mealBlock of mealBlocks) {
+             const mealNameMatch = mealBlock.match(/<span>(Fall - .*?)<span/);
+             if (!mealNameMatch || !mealNameMatch[1]) continue;
+             const mealName = mealNameMatch[1].trim().replace("Fall - ", "");
+
+             // Find all recipe list items within the meal block
+             const recipeItems = mealBlock.split('<li class="recip');
+             for(const recipeItem of recipeItems) {
+                // Extract the text from the first span, which is the recipe name
+                const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
+                if (recipeNameMatch && recipeNameMatch[1]) {
+                    const recipeName = recipeNameMatch[1].trim();
+                    
+                    // Check if the recipe name contains the food keyword AND is not a long description
+                    if (recipeName.length < 100 && recipeName.toLowerCase().includes(food.toLowerCase())) {
+                        foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
                     }
                 }
-            }
-            currentIndex = currentIndex + locationMarker.length;
+             }
         }
     }
     return [...new Set(foundItems)];
 }
 
-// ✅ NEW: Endpoint logic now finds ALL occurrences of each food for the week.
+
 app.post('/api/menu/full-week-report', async (req, res) => {
     try {
         const { favoriteFoods, targetLocations } = req.body;
@@ -74,13 +93,11 @@ app.post('/api/menu/full-week-report', async (req, res) => {
             return res.status(400).json({ error: 'favoriteFoods and targetLocations are required.' });
         }
         
-        // Initialize a report structure for each food
         const report = {};
         favoriteFoods.forEach(food => {
             report[food] = { food: food, found_days: [] };
         });
 
-        // Loop through the next 8 days to find all occurrences
         for (let i = 0; i < 8; i++) {
             const date = new Date();
             date.setDate(date.getDate() + i);
@@ -89,11 +106,9 @@ app.post('/api/menu/full-week-report', async (req, res) => {
             const menuHtml = await fetchMenuForDate(dateStr);
             if (!menuHtml) continue;
 
-            // Check for each favorite food on this specific day
             for (const food of favoriteFoods) {
                 const items = findFoodInHtml(menuHtml, food, targetLocations);
                 if (items.length > 0) {
-                    // If found, add this day's details to the food's report
                     report[food].found_days.push({
                         date: date,
                         details: items.join('')
@@ -102,7 +117,6 @@ app.post('/api/menu/full-week-report', async (req, res) => {
             }
         }
         
-        // Convert the report object to an array for the frontend
         res.json(Object.values(report));
 
     } catch (error) {
