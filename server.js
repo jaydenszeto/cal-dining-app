@@ -12,7 +12,6 @@ app.use(express.json());
 const BERKELEY_API_URL = "https://dining.berkeley.edu/wp-admin/admin-ajax.php";
 const AJAX_ACTION = 'cald_filter_xml';
 
-// --- Helper function to fetch menu for a single date ---
 async function fetchMenuForDate(dateStr) {
     const formData = new URLSearchParams();
     formData.append('action', AJAX_ACTION);
@@ -34,14 +33,6 @@ async function fetchMenuForDate(dateStr) {
     }
 }
 
-/**
- * A simple, dependency-free HTML parser that runs on the server.
- * It finds all occurrences of a specific food within the menus of target locations.
- * @param {string} htmlText - The raw HTML from the dining site.
- * @param {string} food - The single food keyword to search for (e.g., "curry").
- * @param {string[]} targetLocations - An array of dining hall names (e.g., ["Crossroads"]).
- * @returns {string[]} An array of formatted HTML list items for display.
- */
 function findFoodInHtml(htmlText, food, targetLocations) {
     const foundItems = [];
     const lowerCaseHtml = htmlText.toLowerCase();
@@ -50,7 +41,6 @@ function findFoodInHtml(htmlText, food, targetLocations) {
         let currentIndex = 0;
         const locationMarker = `<span class="cafe-title">${location}</span>`.toLowerCase();
 
-        // Find each instance of the location on the page
         while ((currentIndex = lowerCaseHtml.indexOf(locationMarker, currentIndex)) !== -1) {
             const endOfLocationBlock = lowerCaseHtml.indexOf('<li class="location-name"', currentIndex + 1);
             const locationHtml = htmlText.substring(currentIndex, endOfLocationBlock === -1 ? undefined : endOfLocationBlock);
@@ -73,10 +63,10 @@ function findFoodInHtml(htmlText, food, targetLocations) {
             currentIndex = currentIndex + locationMarker.length;
         }
     }
-    return [...new Set(foundItems)]; // Return unique items
+    return [...new Set(foundItems)];
 }
 
-// ✅ NEW: The primary endpoint to handle the entire weekly lookup
+// ✅ NEW: Endpoint logic now finds ALL occurrences of each food for the week.
 app.post('/api/menu/full-week-report', async (req, res) => {
     try {
         const { favoriteFoods, targetLocations } = req.body;
@@ -84,14 +74,14 @@ app.post('/api/menu/full-week-report', async (req, res) => {
             return res.status(400).json({ error: 'favoriteFoods and targetLocations are required.' });
         }
         
-        const results = [];
-        const foundFoods = new Set();
+        // Initialize a report structure for each food
+        const report = {};
+        favoriteFoods.forEach(food => {
+            report[food] = { food: food, found_days: [] };
+        });
 
-        // Loop through the next 8 days (today + 7 more)
+        // Loop through the next 8 days to find all occurrences
         for (let i = 0; i < 8; i++) {
-            // If we've found every food, we can stop early.
-            if (foundFoods.size === favoriteFoods.length) break;
-
             const date = new Date();
             date.setDate(date.getDate() + i);
             const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
@@ -99,31 +89,21 @@ app.post('/api/menu/full-week-report', async (req, res) => {
             const menuHtml = await fetchMenuForDate(dateStr);
             if (!menuHtml) continue;
 
-            // Check for any foods we haven't found yet
+            // Check for each favorite food on this specific day
             for (const food of favoriteFoods) {
-                if (!foundFoods.has(food)) {
-                    const items = findFoodInHtml(menuHtml, food, targetLocations);
-                    if (items.length > 0) {
-                        results.push({
-                            food: food,
-                            status: i === 0 ? 'today' : 'upcoming',
-                            date: date,
-                            details: items.join('')
-                        });
-                        foundFoods.add(food);
-                    }
+                const items = findFoodInHtml(menuHtml, food, targetLocations);
+                if (items.length > 0) {
+                    // If found, add this day's details to the food's report
+                    report[food].found_days.push({
+                        date: date,
+                        details: items.join('')
+                    });
                 }
             }
         }
-
-        // For any foods that were never found, add a "not_found" status
-        for (const food of favoriteFoods) {
-            if (!foundFoods.has(food)) {
-                results.push({ food: food, status: 'not_found' });
-            }
-        }
-
-        res.json(results);
+        
+        // Convert the report object to an array for the frontend
+        res.json(Object.values(report));
 
     } catch (error) {
         console.error('Error in /api/menu/full-week-report:', error);
@@ -131,21 +111,7 @@ app.post('/api/menu/full-week-report', async (req, res) => {
     }
 });
 
-
-// --- Old endpoints are no longer used by the new frontend but are kept for reference ---
-app.post('/api/menu', async (req, res) => {
-    try {
-        const { date } = req.body;
-        if (!date) return res.status(400).json({ error: 'Date is required' });
-        const menuHtml = await fetchMenuForDate(date);
-        res.send(menuHtml);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch menu data.' });
-    }
-});
-app.post('/api/menu/week', async (req, res) => res.status(404).json({error: 'This endpoint is deprecated.'}));
-
-
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
