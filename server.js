@@ -41,40 +41,31 @@ async function fetchMenuForDate(dateStr) {
  */
 function findFoodInHtml(htmlText, food, targetLocations) {
     const foundItems = [];
-    // Split the entire menu by the main location list item tag.
-    // This gives us a chunk of HTML for each location.
     const locationBlocks = htmlText.split('<li class="location-name');
 
     for (const block of locationBlocks) {
-        if (!block) continue; // First item from split is usually empty
+        if (!block) continue;
 
-        // Find the name of the location within this block
         const titleMatch = block.match(/<span class="cafe-title">(.*?)<\/span>/);
         if (!titleMatch || !titleMatch[1]) continue;
         const locationName = titleMatch[1].trim();
 
-        // If this block isn't for a location the user selected, skip it entirely.
         if (!targetLocations.includes(locationName)) {
             continue;
         }
 
-        // Now, we are ONLY searching within the correct location's HTML block.
-        // Split this location's content by meal periods (Brunch, Dinner, etc.)
         const mealBlocks = block.split('<li class="preiod-name');
         for (const mealBlock of mealBlocks) {
              const mealNameMatch = mealBlock.match(/<span>(Fall - .*?)<span/);
              if (!mealNameMatch || !mealNameMatch[1]) continue;
              const mealName = mealNameMatch[1].trim().replace("Fall - ", "");
 
-             // Find all recipe list items within the meal block
              const recipeItems = mealBlock.split('<li class="recip');
              for(const recipeItem of recipeItems) {
-                // Extract the text from the first span, which is the recipe name
                 const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
                 if (recipeNameMatch && recipeNameMatch[1]) {
                     const recipeName = recipeNameMatch[1].trim();
                     
-                    // Check if the recipe name contains the food keyword AND is not a long description
                     if (recipeName.length < 100 && recipeName.toLowerCase().includes(food.toLowerCase())) {
                         foundItems.push(`<li><strong>${recipeName}</strong> at ${locationName} (${mealName})</li>`);
                     }
@@ -85,6 +76,78 @@ function findFoodInHtml(htmlText, food, targetLocations) {
     return [...new Set(foundItems)];
 }
 
+/**
+ * ✅ NEW: Parse full menu for a specific location
+ */
+function parseFullMenuForLocation(htmlText, targetLocation) {
+    const menuData = { location: targetLocation, meals: [] };
+    
+    const locationBlocks = htmlText.split('<li class="location-name');
+    
+    for (const block of locationBlocks) {
+        if (!block) continue;
+        
+        const titleMatch = block.match(/<span class="cafe-title">(.*?)<\/span>/);
+        if (!titleMatch || !titleMatch[1]) continue;
+        const locationName = titleMatch[1].trim();
+        
+        if (locationName !== targetLocation) continue;
+        
+        const mealBlocks = block.split('<li class="preiod-name');
+        for (const mealBlock of mealBlocks) {
+            const mealNameMatch = mealBlock.match(/<span>(Fall - .*?)<span/);
+            if (!mealNameMatch || !mealNameMatch[1]) continue;
+            const mealName = mealNameMatch[1].trim().replace("Fall - ", "");
+            
+            const items = [];
+            const recipeItems = mealBlock.split('<li class="recip');
+            for (const recipeItem of recipeItems) {
+                const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
+                if (recipeNameMatch && recipeNameMatch[1]) {
+                    const recipeName = recipeNameMatch[1].trim();
+                    if (recipeName.length < 100) {
+                        items.push(recipeName);
+                    }
+                }
+            }
+            
+            if (items.length > 0) {
+                menuData.meals.push({ mealName, items });
+            }
+        }
+    }
+    
+    return menuData;
+}
+
+app.post('/api/menu/full-menu', async (req, res) => {
+    try {
+        const { location, dateOffset = 0 } = req.body;
+        if (!location) {
+            return res.status(400).json({ error: 'location is required.' });
+        }
+        
+        const date = new Date();
+        date.setDate(date.getDate() + dateOffset);
+        const dateStr = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+        
+        const menuHtml = await fetchMenuForDate(dateStr);
+        if (!menuHtml) {
+            return res.status(404).json({ error: 'Menu not available for this date.' });
+        }
+        
+        const fullMenu = parseFullMenuForLocation(menuHtml, location);
+        res.json({
+            ...fullMenu,
+            date: date.toISOString(),
+            dateStr: date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+        });
+        
+    } catch (error) {
+        console.error('Error in /api/menu/full-menu:', error);
+        res.status(500).json({ error: 'Failed to fetch full menu.' });
+    }
+});
 
 app.post('/api/menu/full-week-report', async (req, res) => {
     try {
@@ -128,4 +191,3 @@ app.post('/api/menu/full-week-report', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
