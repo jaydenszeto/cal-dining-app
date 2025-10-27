@@ -207,31 +207,57 @@
                 if (menuData.meals.length === 0) {
                     htmlContent += `<p class="text-gray-500">No menu available for this location and date.</p>`;
                 } else {
-                    htmlContent += '<div class="space-y-8">';
-                    menuData.meals.forEach(meal => {
-                        htmlContent += `<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                                          <h3 class="text-xl font-bold text-gray-800 mb-4 pb-3 border-b-2 border-amber-200">${meal.mealName}</h3>`;
-                        
-                        if (meal.categories && meal.categories.length > 0) {
-                            htmlContent += '<div class="space-y-6">';
-                            meal.categories.forEach(category => {
-                                htmlContent += `<div>
-                                                  <h4 class="category-header">${category.categoryName}</h4>
-                                                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
-                                category.items.forEach(item => {
-                                    htmlContent += `<div class="flex items-start py-1.5">
-                                                      <span class="text-amber-600 mr-2 mt-1">•</span>
-                                                      <span class="text-gray-700 text-sm leading-relaxed">${item}</span>
-                                                    </div>`;
+                    // Filter meals based on current time (only for today)
+                    const now = new Date();
+                    const menuDate = new Date(menuData.date);
+                    const isToday = now.toDateString() === menuDate.toDateString();
+                    
+                    let filteredMeals = menuData.meals;
+                    
+                    if (isToday) {
+                        const currentHour = now.getHours();
+                        filteredMeals = menuData.meals.filter(meal => {
+                            const mealLower = meal.mealName.toLowerCase();
+                            // Hide breakfast after 11 AM
+                            if (mealLower.includes('breakfast') && currentHour >= 11) return false;
+                            // Hide brunch after 2 PM
+                            if (mealLower.includes('brunch') && currentHour >= 14) return false;
+                            // Hide lunch after 3 PM
+                            if (mealLower.includes('lunch') && currentHour >= 15) return false;
+                            // Always show dinner and other meals
+                            return true;
+                        });
+                    }
+                    
+                    if (filteredMeals.length === 0) {
+                        htmlContent += `<p class="text-gray-500">No upcoming meals available for today.</p>`;
+                    } else {
+                        htmlContent += '<div class="space-y-8">';
+                        filteredMeals.forEach(meal => {
+                            htmlContent += `<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                              <h3 class="text-xl font-bold text-gray-800 mb-4 pb-3 border-b-2 border-amber-200">${meal.mealName}</h3>`;
+                            
+                            if (meal.categories && meal.categories.length > 0) {
+                                htmlContent += '<div class="space-y-6">';
+                                meal.categories.forEach(category => {
+                                    htmlContent += `<div>
+                                                      <h4 class="category-header">${category.categoryName}</h4>
+                                                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
+                                    category.items.forEach(item => {
+                                        htmlContent += `<div class="flex items-start py-1.5">
+                                                          <span class="text-amber-600 mr-2 flex-shrink-0">•</span>
+                                                          <span class="text-gray-700 text-sm leading-relaxed flex-1">${item}</span>
+                                                        </div>`;
+                                    });
+                                    htmlContent += `</div></div>`;
                                 });
-                                htmlContent += `</div></div>`;
-                            });
-                            htmlContent += '</div>';
-                        }
-                        
-                        htmlContent += `</div>`;
-                    });
-                    htmlContent += '</div>';
+                                htmlContent += '</div>';
+                            }
+                            
+                            htmlContent += `</div>`;
+                        });
+                        htmlContent += '</div>';
+                    }
                 }
 
                 UIElements.resultsContainer.innerHTML = htmlContent;
