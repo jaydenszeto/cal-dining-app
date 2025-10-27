@@ -10,11 +10,25 @@
         body { font-family: 'Inter', sans-serif; }
         .custom-checkbox:checked {
             background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-            background-color: #2563eb; border-color: #2563eb;
+            background-color: #7c6a5c; 
+            border-color: #7c6a5c;
         }
         .tab-active {
-            background-color: #2563eb;
+            background-color: #7c6a5c;
             color: white;
+        }
+        .accent-bg {
+            background: linear-gradient(135deg, #8b7355 0%, #6b5d4f 100%);
+        }
+        .category-header {
+            color: #6b5d4f;
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e5d5c3;
         }
     </style>
 </head>
@@ -22,9 +36,9 @@
 
     <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
         <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div class="p-6 bg-blue-600 text-white">
+            <div class="p-6 accent-bg text-white">
                 <h1 class="text-2xl font-bold">🌮 Cal Dining Menu Checker</h1>
-                <p class="mt-1 text-blue-100">Browse full menus or find your favorite foods!</p>
+                <p class="mt-1 text-amber-100">Browse full menus or find your favorite foods!</p>
             </div>
 
             <!-- Tab Buttons -->
@@ -42,7 +56,7 @@
                 <div class="p-6 border-b border-gray-200">
                     <div class="mb-4">
                         <label for="dining-hall-select" class="block text-sm font-medium text-gray-700 mb-2">Select Dining Hall</label>
-                        <select id="dining-hall-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select id="dining-hall-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                             <option value="">Choose a dining hall...</option>
                             <option value="Crossroads">Crossroads</option>
                             <option value="Cafe 3">Cafe 3</option>
@@ -52,7 +66,7 @@
                     </div>
                     <div>
                         <label for="date-offset-select" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                        <select id="date-offset-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <select id="date-offset-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                             <option value="0">Today</option>
                             <option value="1">Tomorrow</option>
                             <option value="2">In 2 days</option>
@@ -65,7 +79,7 @@
                     </div>
                 </div>
                 <div class="p-6">
-                    <button id="view-menu-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
+                    <button id="view-menu-btn" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:from-amber-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all transform active:scale-95 flex items-center justify-center shadow-md">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                         <span>View Full Menu</span>
                     </button>
@@ -77,7 +91,7 @@
                 <div class="p-6 border-b border-gray-200">
                     <div class="mb-4">
                         <label for="favorite-foods" class="block text-sm font-medium text-gray-700 mb-1">Favorite Foods</label>
-                        <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="e.g., curry, shrimp, tacos">
+                        <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="e.g., curry, shrimp, tacos">
                         <p class="text-xs text-gray-500 mt-1">Separate foods with a comma.</p>
                     </div>
                     <div>
@@ -86,7 +100,7 @@
                     </div>
                 </div>
                 <div class="p-6">
-                    <button id="check-menu-btn" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform active:scale-95 flex items-center justify-center">
+                    <button id="check-menu-btn" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:from-amber-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all transform active:scale-95 flex items-center justify-center shadow-md">
                         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                         <span>Search Menu</span>
                     </button>
@@ -94,7 +108,7 @@
             </div>
             
             <div id="loading-container" class="p-6 text-center text-gray-500 hidden border-t">
-                 <svg class="animate-spin mx-auto h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                 <svg class="animate-spin mx-auto h-8 w-8 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                  <p id="loading-text" class="mt-2 text-sm">Loading...</p>
             </div>
 
@@ -187,24 +201,35 @@
 
             // Display Full Menu
             function displayFullMenu(menuData) {
-                let htmlContent = `<h2 class="text-xl font-bold mb-2 text-gray-800">${menuData.location}</h2>
-                                   <p class="text-sm text-gray-600 mb-4">${menuData.dateStr}</p>`;
+                let htmlContent = `<h2 class="text-2xl font-bold mb-1 text-gray-800">${menuData.location}</h2>
+                                   <p class="text-sm text-gray-500 mb-6">${menuData.dateStr}</p>`;
                 
                 if (menuData.meals.length === 0) {
                     htmlContent += `<p class="text-gray-500">No menu available for this location and date.</p>`;
                 } else {
-                    htmlContent += '<div class="space-y-6">';
+                    htmlContent += '<div class="space-y-8">';
                     menuData.meals.forEach(meal => {
-                        htmlContent += `<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                                          <h3 class="text-lg font-semibold text-blue-600 mb-3">${meal.mealName}</h3>
-                                          <ul class="space-y-1 text-gray-700">`;
-                        meal.items.forEach(item => {
-                            htmlContent += `<li class="flex items-start">
-                                              <span class="text-blue-400 mr-2">•</span>
-                                              <span>${item}</span>
-                                            </li>`;
-                        });
-                        htmlContent += `</ul></div>`;
+                        htmlContent += `<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
+                                          <h3 class="text-xl font-bold text-gray-800 mb-4 pb-3 border-b-2 border-amber-200">${meal.mealName}</h3>`;
+                        
+                        if (meal.categories && meal.categories.length > 0) {
+                            htmlContent += '<div class="space-y-6">';
+                            meal.categories.forEach(category => {
+                                htmlContent += `<div>
+                                                  <h4 class="category-header">${category.categoryName}</h4>
+                                                  <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
+                                category.items.forEach(item => {
+                                    htmlContent += `<div class="flex items-start py-1.5">
+                                                      <span class="text-amber-600 mr-2 mt-1">•</span>
+                                                      <span class="text-gray-700 text-sm leading-relaxed">${item}</span>
+                                                    </div>`;
+                                });
+                                htmlContent += `</div></div>`;
+                            });
+                            htmlContent += '</div>';
+                        }
+                        
+                        htmlContent += `</div>`;
                     });
                     htmlContent += '</div>';
                 }
@@ -220,18 +245,18 @@
                 report.forEach(result => {
                     const foodName = result.food.charAt(0).toUpperCase() + result.food.slice(1);
                     
-                    htmlContent += `<div class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    htmlContent += `<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                                       <h3 class="text-lg font-semibold text-gray-900">${foodName}</h3>`;
 
                     if (result.found_days.length === 0) {
                         htmlContent += `<p class="mt-2 text-gray-500">Not found on the menu for the next 7 days.</p>`;
                     } else {
-                        let dailyList = '<ul class="mt-2 divide-y divide-gray-200">';
+                        let dailyList = '<ul class="mt-2 divide-y divide-gray-100">';
                         result.found_days.forEach(dayInfo => {
                             const dayName = new Date(dayInfo.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
                             dailyList += `<li class="py-3">
-                                            <p class="font-medium text-gray-800">${dayName}:</p>
-                                            <ul class="mt-2 pl-4 space-y-1 list-disc list-inside text-gray-600">${dayInfo.details}</ul>
+                                            <p class="font-medium text-gray-800 mb-1">${dayName}:</p>
+                                            <ul class="pl-4 space-y-1 text-gray-600 text-sm">${dayInfo.details}</ul>
                                           </li>`;
                         });
                         dailyList += '</ul>';
