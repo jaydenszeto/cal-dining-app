@@ -77,7 +77,7 @@ function findFoodInHtml(htmlText, food, targetLocations) {
 }
 
 /**
- * ✅ NEW: Parse full menu for a specific location
+ * ✅ NEW: Parse full menu for a specific location with categories
  */
 function parseFullMenuForLocation(htmlText, targetLocation) {
     const menuData = { location: targetLocation, meals: [] };
@@ -99,20 +99,37 @@ function parseFullMenuForLocation(htmlText, targetLocation) {
             if (!mealNameMatch || !mealNameMatch[1]) continue;
             const mealName = mealNameMatch[1].trim().replace("Fall - ", "");
             
-            const items = [];
-            const recipeItems = mealBlock.split('<li class="recip');
-            for (const recipeItem of recipeItems) {
-                const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
-                if (recipeNameMatch && recipeNameMatch[1]) {
-                    const recipeName = recipeNameMatch[1].trim();
-                    if (recipeName.length < 100) {
-                        items.push(recipeName);
+            const categories = [];
+            
+            // Split by category blocks
+            const categoryBlocks = mealBlock.split('<div class="cat-name">');
+            for (const catBlock of categoryBlocks) {
+                if (!catBlock.includes('<span>')) continue;
+                
+                const categoryMatch = catBlock.match(/<span>(.*?)<\/span>/);
+                if (!categoryMatch || !categoryMatch[1]) continue;
+                const categoryName = categoryMatch[1].trim();
+                
+                const items = [];
+                const recipeItems = catBlock.split('<li class="recip');
+                for (const recipeItem of recipeItems) {
+                    const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
+                    if (recipeNameMatch && recipeNameMatch[1]) {
+                        const recipeName = recipeNameMatch[1].trim();
+                        // Filter out long descriptions and category names
+                        if (recipeName.length < 100 && recipeName !== categoryName) {
+                            items.push(recipeName);
+                        }
                     }
+                }
+                
+                if (items.length > 0) {
+                    categories.push({ categoryName, items });
                 }
             }
             
-            if (items.length > 0) {
-                menuData.meals.push({ mealName, items });
+            if (categories.length > 0) {
+                menuData.meals.push({ mealName, categories });
             }
         }
     }
