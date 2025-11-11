@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cal Dining Menu Checker</title>
+    <title>Cal Dining Menu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -41,7 +41,6 @@
                 <p class="mt-1 text-amber-100">Browse full menus or find your favorite foods!</p>
             </div>
 
-            <!-- Tab Buttons -->
             <div class="flex border-b border-gray-200">
                 <button id="tab-full-menu" class="tab-button flex-1 py-3 px-4 text-center font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 tab-active transition-colors">
                     📋 Full Menu
@@ -51,7 +50,6 @@
                 </button>
             </div>
 
-            <!-- Full Menu View -->
             <div id="view-full-menu" class="tab-content">
                 <div class="p-6 border-b border-gray-200">
                     <div class="mb-4">
@@ -86,7 +84,6 @@
                 </div>
             </div>
 
-            <!-- Favorite Foods View -->
             <div id="view-favorite-foods" class="tab-content hidden">
                 <div class="p-6 border-b border-gray-200">
                     <div class="mb-4">
@@ -114,7 +111,6 @@
 
             <div id="results-container" class="p-6 bg-gray-50 hidden border-t"></div>
         </div>
-        <p class="text-center text-xs text-gray-400 mt-6">Created with ❤️ for Cal students</p>
     </div>
 
     <script>
@@ -123,26 +119,21 @@
             
             const getEl = (id) => document.getElementById(id);
             const UIElements = {
-                // Tabs
                 tabFullMenu: getEl('tab-full-menu'),
                 tabFavoriteFoods: getEl('tab-favorite-foods'),
                 viewFullMenu: getEl('view-full-menu'),
                 viewFavoriteFoods: getEl('view-favorite-foods'),
-                // Full Menu View
                 diningHallSelect: getEl('dining-hall-select'),
                 dateOffsetSelect: getEl('date-offset-select'),
                 viewMenuBtn: getEl('view-menu-btn'),
-                // Favorite Foods View
                 foodsInput: getEl('favorite-foods'),
                 locationsContainer: getEl('locations-container'),
                 checkMenuBtn: getEl('check-menu-btn'),
-                // Common
                 loadingContainer: getEl('loading-container'),
                 loadingText: getEl('loading-text'),
                 resultsContainer: getEl('results-container'),
             };
 
-            // Tab Switching
             const switchTab = (tab) => {
                 if (tab === 'full-menu') {
                     UIElements.tabFullMenu.classList.add('tab-active');
@@ -161,7 +152,6 @@
             UIElements.tabFullMenu.addEventListener('click', () => switchTab('full-menu'));
             UIElements.tabFavoriteFoods.addEventListener('click', () => switchTab('favorite-foods'));
 
-            // Populate Locations for Favorite Foods
             const populateLocations = () => { 
                 ALL_LOCATIONS.forEach(loc => { 
                     const div = document.createElement('div'); 
@@ -171,7 +161,6 @@
                 }); 
             };
 
-            // Save/Load Preferences for Favorite Foods
             const savePreferences = () => { 
                 const favs = UIElements.foodsInput.value.trim(); 
                 const locs = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value); 
@@ -199,7 +188,6 @@
                 }
             };
 
-            // Display Full Menu
             function displayFullMenu(menuData) {
                 let htmlContent = `<h2 class="text-2xl font-bold mb-1 text-gray-800">${menuData.location}</h2>
                                    <p class="text-sm text-gray-500 mb-6">${menuData.dateStr}</p>`;
@@ -207,7 +195,6 @@
                 if (menuData.meals.length === 0) {
                     htmlContent += `<p class="text-gray-500">No menu available for this location and date.</p>`;
                 } else {
-                    // Filter meals based on current time (only for today)
                     const now = new Date();
                     const menuDate = new Date(menuData.date);
                     const isToday = now.toDateString() === menuDate.toDateString();
@@ -218,13 +205,9 @@
                         const currentHour = now.getHours();
                         filteredMeals = menuData.meals.filter(meal => {
                             const mealLower = meal.mealName.toLowerCase();
-                            // Hide breakfast after 11 AM
                             if (mealLower.includes('breakfast') && currentHour >= 11) return false;
-                            // Hide brunch after 2 PM
                             if (mealLower.includes('brunch') && currentHour >= 14) return false;
-                            // Hide lunch after 3 PM
                             if (mealLower.includes('lunch') && currentHour >= 15) return false;
-                            // Always show dinner and other meals
                             return true;
                         });
                     }
@@ -264,7 +247,6 @@
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
-            // Display Favorite Foods Report
             function displayReport(report) {
                 let htmlContent = '';
                 
@@ -295,7 +277,6 @@
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
-            // View Full Menu
             async function viewFullMenu() {
                 const location = UIElements.diningHallSelect.value;
                 const dateOffset = parseInt(UIElements.dateOffsetSelect.value);
@@ -331,7 +312,6 @@
                 }
             }
 
-            // Check Favorite Foods
             async function checkMenu() {
                 savePreferences();
                 const favoriteFoods = UIElements.foodsInput.value.split(',').map(f => f.trim()).filter(f => f);
@@ -368,7 +348,6 @@
                 }
             }
 
-            // Initialize
             populateLocations();
             loadPreferences();
             UIElements.viewMenuBtn.addEventListener('click', viewFullMenu);
