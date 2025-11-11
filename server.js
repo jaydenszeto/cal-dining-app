@@ -33,12 +33,6 @@ async function fetchMenuForDate(dateStr) {
     }
 }
 
-/**
- * ✅ NEW: A more robust, server-side HTML parser.
- * This version correctly isolates each location's menu before searching,
- * preventing data from one location being attributed to another. It also
- * filters out long descriptions that are not actual menu items.
- */
 function findFoodInHtml(htmlText, food, targetLocations) {
     const foundItems = [];
     const locationBlocks = htmlText.split('<li class="location-name');
@@ -76,9 +70,6 @@ function findFoodInHtml(htmlText, food, targetLocations) {
     return [...new Set(foundItems)];
 }
 
-/**
- * ✅ NEW: Parse full menu for a specific location with categories
- */
 function parseFullMenuForLocation(htmlText, targetLocation) {
     const menuData = { location: targetLocation, meals: [] };
     
@@ -101,7 +92,6 @@ function parseFullMenuForLocation(htmlText, targetLocation) {
             
             const categories = [];
             
-            // Split by category blocks
             const categoryBlocks = mealBlock.split('<div class="cat-name">');
             for (const catBlock of categoryBlocks) {
                 if (!catBlock.includes('<span>')) continue;
@@ -116,7 +106,6 @@ function parseFullMenuForLocation(htmlText, targetLocation) {
                     const recipeNameMatch = recipeItem.match(/<span>(.*?)<\/span>/);
                     if (recipeNameMatch && recipeNameMatch[1]) {
                         const recipeName = recipeNameMatch[1].trim();
-                        // Filter out long descriptions and category names
                         if (recipeName.length < 100 && recipeName !== categoryName) {
                             items.push(recipeName);
                         }
