@@ -1,115 +1,330 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-50">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cal Dining Menu</title>
+    <title>cal dining</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .custom-checkbox:checked {
-            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
-            background-color: #7c6a5c; 
-            border-color: #7c6a5c;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .tab-active {
-            background-color: #7c6a5c;
+
+        :root {
+            font-family: 'IBM Plex Mono', monospace;
+            color: rgba(255, 255, 255, 0.87);
+            background-color: #000000;
+        }
+
+        body { 
+            font-family: 'IBM Plex Mono', monospace;
+            background: #000000;
+            color: rgba(255, 255, 255, 0.87);
+            min-height: 100vh;
+        }
+
+        .brand-title {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: 0.1rem;
             color: white;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            background: linear-gradient(142deg, #ffeee2 0%, #eec9b0 40%, #ffffff 60%, #efb496 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .accent-bg {
-            background: linear-gradient(135deg, #8b7355 0%, #6b5d4f 100%);
+
+        .brand-subtitle {
+            font-size: 0.9rem;
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 0.05rem;
         }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        select, input[type="text"] {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.9);
+            font-family: 'IBM Plex Mono', monospace;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        select option {
+            background: #1a1a1a;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .tab-button {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.85rem;
+            letter-spacing: 0.05rem;
+            padding: 16px;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .tab-active {
+            color: rgba(255, 255, 255, 0.95);
+            border-bottom-color: rgba(255, 238, 226, 0.6);
+        }
+
+        .action-button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.95);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            letter-spacing: 0.05rem;
+            padding: 14px 24px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .action-button:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .custom-checkbox {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .custom-checkbox:checked {
+            background: rgba(255, 238, 226, 0.2);
+            border-color: rgba(255, 238, 226, 0.5);
+        }
+
+        .custom-checkbox:checked::after {
+            content: '✓';
+            display: block;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 12px;
+            text-align: center;
+            line-height: 14px;
+        }
+
+        .label-text {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.85rem;
+            letter-spacing: 0.03rem;
+        }
+
+        .meal-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .meal-title {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 0.05rem;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 238, 226, 0.15);
+        }
+
         .category-header {
-            color: #6b5d4f;
-            font-weight: 600;
-            font-size: 0.875rem;
+            color: rgba(255, 238, 226, 0.8);
+            font-size: 0.75rem;
+            font-weight: 400;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid #e5d5c3;
+            letter-spacing: 0.1rem;
+            margin-bottom: 12px;
+        }
+
+        .food-item {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .loading-spinner {
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid rgba(255, 238, 226, 0.8);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .result-title {
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 1rem;
+            font-weight: 500;
+            letter-spacing: 0.03rem;
+            margin-bottom: 12px;
+        }
+
+        .result-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .day-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .day-info:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 768px) {
+            .brand-title {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
-<body class="antialiased text-gray-800">
+<body class="antialiased">
 
-    <div class="max-w-xl mx-auto p-4 sm:p-6 lg:p-8">
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-            <div class="p-6 accent-bg text-white">
-                <h1 class="text-2xl font-bold">🌮 Cal Dining Menu Checker</h1>
-                <p class="mt-1 text-amber-100">Browse full menus or find your favorite foods!</p>
+    <div class="max-w-3xl mx-auto p-6 min-h-screen">
+        <!-- Header -->
+        <div class="text-center mb-8 mt-8">
+            <h1 class="brand-title">cal dining</h1>
+            <p class="brand-subtitle mt-2">browse menus or track your favorite foods</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="glass-card overflow-hidden">
+            <!-- Tabs -->
+            <div class="flex border-b border-white border-opacity-5">
+                <button id="tab-full-menu" class="tab-button flex-1 tab-active">
+                    full menu
+                </button>
+                <button id="tab-favorite-foods" class="tab-button flex-1">
+                    favorite foods
+                </button>
             </div>
 
-            <div class="flex border-b border-gray-200">
-                <button id="tab-full-menu" class="tab-button flex-1 py-3 px-4 text-center font-medium text-gray-700 hover:bg-gray-50 border-r border-gray-200 tab-active transition-colors">
-                    📋 Full Menu
-                </button>
-                <button id="tab-favorite-foods" class="tab-button flex-1 py-3 px-4 text-center font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                    ⭐ Favorite Foods
-                </button>
-            </div>
-
+            <!-- Full Menu View -->
             <div id="view-full-menu" class="tab-content">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="mb-4">
-                        <label for="dining-hall-select" class="block text-sm font-medium text-gray-700 mb-2">Select Dining Hall</label>
-                        <select id="dining-hall-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-                            <option value="">Choose a dining hall...</option>
-                            <option value="Crossroads">Crossroads</option>
-                            <option value="Cafe 3">Cafe 3</option>
-                            <option value="Foothill">Foothill</option>
-                            <option value="Clark Kerr Campus">Clark Kerr Campus</option>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="label-text block mb-2">dining hall</label>
+                        <select id="dining-hall-select" class="w-full">
+                            <option value="">choose...</option>
+                            <option value="Crossroads">crossroads</option>
+                            <option value="Cafe 3">cafe 3</option>
+                            <option value="Foothill">foothill</option>
+                            <option value="Clark Kerr Campus">clark kerr</option>
                         </select>
                     </div>
                     <div>
-                        <label for="date-offset-select" class="block text-sm font-medium text-gray-700 mb-2">Date</label>
-                        <select id="date-offset-select" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
-                            <option value="0">Today</option>
-                            <option value="1">Tomorrow</option>
-                            <option value="2">In 2 days</option>
-                            <option value="3">In 3 days</option>
-                            <option value="4">In 4 days</option>
-                            <option value="5">In 5 days</option>
-                            <option value="6">In 6 days</option>
-                            <option value="7">In 7 days</option>
+                        <label class="label-text block mb-2">date</label>
+                        <select id="date-offset-select" class="w-full">
+                            <option value="0">today</option>
+                            <option value="1">tomorrow</option>
+                            <option value="2">in 2 days</option>
+                            <option value="3">in 3 days</option>
+                            <option value="4">in 4 days</option>
+                            <option value="5">in 5 days</option>
+                            <option value="6">in 6 days</option>
+                            <option value="7">in 7 days</option>
                         </select>
                     </div>
-                </div>
-                <div class="p-6">
-                    <button id="view-menu-btn" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:from-amber-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all transform active:scale-95 flex items-center justify-center shadow-md">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <span>View Full Menu</span>
+                    <button id="view-menu-btn" class="action-button w-full mt-6">
+                        view menu
                     </button>
                 </div>
             </div>
 
+            <!-- Favorite Foods View -->
             <div id="view-favorite-foods" class="tab-content hidden">
-                <div class="p-6 border-b border-gray-200">
-                    <div class="mb-4">
-                        <label for="favorite-foods" class="block text-sm font-medium text-gray-700 mb-1">Favorite Foods</label>
-                        <input type="text" id="favorite-foods" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500" placeholder="e.g., curry, shrimp, tacos">
-                        <p class="text-xs text-gray-500 mt-1">Separate foods with a comma.</p>
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="label-text block mb-2">favorite foods</label>
+                        <input type="text" id="favorite-foods" class="w-full" placeholder="curry, shrimp, tacos">
+                        <p class="text-xs text-white text-opacity-40 mt-1.5">separate with commas</p>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Dining Halls</label>
-                        <div id="locations-container" class="grid grid-cols-2 gap-x-4 gap-y-2"></div>
+                        <label class="label-text block mb-3">dining halls</label>
+                        <div id="locations-container" class="grid grid-cols-2 gap-3"></div>
                     </div>
-                </div>
-                <div class="p-6">
-                    <button id="check-menu-btn" class="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold py-3 px-4 rounded-lg hover:from-amber-700 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-all transform active:scale-95 flex items-center justify-center shadow-md">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        <span>Search Menu</span>
+                    <button id="check-menu-btn" class="action-button w-full mt-6">
+                        search
                     </button>
                 </div>
             </div>
             
-            <div id="loading-container" class="p-6 text-center text-gray-500 hidden border-t">
-                 <svg class="animate-spin mx-auto h-8 w-8 text-amber-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                 <p id="loading-text" class="mt-2 text-sm">Loading...</p>
+            <!-- Loading -->
+            <div id="loading-container" class="p-8 text-center hidden">
+                <div class="loading-spinner mx-auto"></div>
+                <p id="loading-text" class="mt-4 text-sm text-white text-opacity-60">loading...</p>
             </div>
 
-            <div id="results-container" class="p-6 bg-gray-50 hidden border-t"></div>
+            <!-- Results -->
+            <div id="results-container" class="p-6 hidden"></div>
         </div>
     </div>
 
@@ -156,7 +371,8 @@
                 ALL_LOCATIONS.forEach(loc => { 
                     const div = document.createElement('div'); 
                     div.className = 'flex items-center'; 
-                    div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${loc}</label>`; 
+                    const displayName = loc.toLowerCase().replace('campus', '').trim();
+                    div.innerHTML = `<input id="loc-${loc.replace(/\s+/g, '-')}" name="location" type="checkbox" value="${loc}" class="custom-checkbox"><label for="loc-${loc.replace(/\s+/g, '-')}" class="ml-2 label-text cursor-pointer">${displayName}</label>`; 
                     UIElements.locationsContainer.appendChild(div); 
                 }); 
             };
@@ -180,7 +396,7 @@
                 } 
             };
             
-            const showLoading = (isLoading, text = 'Loading...') => {
+            const showLoading = (isLoading, text = 'loading...') => {
                 UIElements.loadingContainer.classList.toggle('hidden', !isLoading);
                 UIElements.loadingText.textContent = text;
                 if (isLoading) {
@@ -189,11 +405,13 @@
             };
 
             function displayFullMenu(menuData) {
-                let htmlContent = `<h2 class="text-2xl font-bold mb-1 text-gray-800">${menuData.location}</h2>
-                                   <p class="text-sm text-gray-500 mb-6">${menuData.dateStr}</p>`;
+                let htmlContent = `<div class="mb-6">
+                                     <h2 class="text-xl font-medium text-white text-opacity-95 mb-1" style="letter-spacing: 0.03rem;">${menuData.location.toLowerCase()}</h2>
+                                     <p class="text-sm text-white text-opacity-50">${menuData.dateStr}</p>
+                                   </div>`;
                 
                 if (menuData.meals.length === 0) {
-                    htmlContent += `<p class="text-gray-500">No menu available for this location and date.</p>`;
+                    htmlContent += `<p class="result-text">no menu available</p>`;
                 } else {
                     const now = new Date();
                     const menuDate = new Date(menuData.date);
@@ -213,24 +431,20 @@
                     }
                     
                     if (filteredMeals.length === 0) {
-                        htmlContent += `<p class="text-gray-500">No upcoming meals available for today.</p>`;
+                        htmlContent += `<p class="result-text">no upcoming meals</p>`;
                     } else {
-                        htmlContent += '<div class="space-y-8">';
                         filteredMeals.forEach(meal => {
-                            htmlContent += `<div class="bg-white rounded-xl p-5 shadow-sm border border-gray-200">
-                                              <h3 class="text-xl font-bold text-gray-800 mb-4 pb-3 border-b-2 border-amber-200">${meal.mealName}</h3>`;
+                            htmlContent += `<div class="meal-card">
+                                              <h3 class="meal-title">${meal.mealName.toLowerCase()}</h3>`;
                             
                             if (meal.categories && meal.categories.length > 0) {
-                                htmlContent += '<div class="space-y-6">';
+                                htmlContent += '<div class="space-y-5">';
                                 meal.categories.forEach(category => {
                                     htmlContent += `<div>
-                                                      <h4 class="category-header">${category.categoryName}</h4>
-                                                      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">`;
+                                                      <h4 class="category-header">${category.categoryName.toLowerCase()}</h4>
+                                                      <div class="space-y-1">`;
                                     category.items.forEach(item => {
-                                        htmlContent += `<div class="flex items-start py-1.5">
-                                                          <span class="text-amber-600 mr-2 flex-shrink-0">•</span>
-                                                          <span class="text-gray-700 text-sm leading-relaxed flex-1">${item}</span>
-                                                        </div>`;
+                                        htmlContent += `<div class="food-item">• ${item.toLowerCase()}</div>`;
                                     });
                                     htmlContent += `</div></div>`;
                                 });
@@ -239,7 +453,6 @@
                             
                             htmlContent += `</div>`;
                         });
-                        htmlContent += '</div>';
                     }
                 }
 
@@ -251,29 +464,28 @@
                 let htmlContent = '';
                 
                 report.forEach(result => {
-                    const foodName = result.food.charAt(0).toUpperCase() + result.food.slice(1);
+                    const foodName = result.food.toLowerCase();
                     
-                    htmlContent += `<div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                                      <h3 class="text-lg font-semibold text-gray-900">${foodName}</h3>`;
+                    htmlContent += `<div class="result-card">
+                                      <h3 class="result-title">${foodName}</h3>`;
 
                     if (result.found_days.length === 0) {
-                        htmlContent += `<p class="mt-2 text-gray-500">Not found on the menu for the next 7 days.</p>`;
+                        htmlContent += `<p class="result-text">not found in the next 7 days</p>`;
                     } else {
-                        let dailyList = '<ul class="mt-2 divide-y divide-gray-100">';
+                        htmlContent += '<div class="space-y-2 mt-3">';
                         result.found_days.forEach(dayInfo => {
                             const dayName = new Date(dayInfo.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' });
-                            dailyList += `<li class="py-3">
-                                            <p class="font-medium text-gray-800 mb-1">${dayName}:</p>
-                                            <ul class="pl-4 space-y-1 text-gray-600 text-sm">${dayInfo.details}</ul>
-                                          </li>`;
+                            htmlContent += `<div class="day-info">
+                                              <div style="color: rgba(255, 255, 255, 0.85); margin-bottom: 4px;">${dayName.toLowerCase()}</div>
+                                              <div style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem; padding-left: 12px;">${dayInfo.details.replace(/<li>/g, '').replace(/<\/li>/g, '<br>').replace(/<[^>]*>/g, '')}</div>
+                                            </div>`;
                         });
-                        dailyList += '</ul>';
-                        htmlContent += dailyList;
+                        htmlContent += '</div>';
                     }
                     htmlContent += `</div>`;
                 });
 
-                UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Menu Report</h2><div class="space-y-4">${htmlContent}</div>`;
+                UIElements.resultsContainer.innerHTML = htmlContent;
                 UIElements.resultsContainer.classList.remove('hidden');
             }
 
@@ -282,11 +494,11 @@
                 const dateOffset = parseInt(UIElements.dateOffsetSelect.value);
 
                 if (!location) {
-                    alert("Please select a dining hall.");
+                    alert("please select a dining hall");
                     return;
                 }
 
-                showLoading(true, "Loading menu...");
+                showLoading(true, "loading menu...");
 
                 try {
                     const res = await fetch('/api/menu/full-menu', { 
@@ -297,7 +509,7 @@
                     
                     if (!res.ok) {
                          const errorData = await res.json();
-                         throw new Error(errorData.error || 'Failed to get menu from server.');
+                         throw new Error(errorData.error || 'failed to get menu');
                     }
                     
                     const menuData = await res.json();
@@ -305,7 +517,7 @@
 
                 } catch (e) {
                     console.error(e);
-                    UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Error</h2><p class="text-red-600">Could not connect to the dining hall server. Please try again later.</p>`;
+                    UIElements.resultsContainer.innerHTML = `<div class="result-card"><h3 class="result-title">error</h3><p class="result-text">could not connect to server</p></div>`;
                     UIElements.resultsContainer.classList.remove('hidden');
                 } finally {
                     showLoading(false);
@@ -318,11 +530,11 @@
                 const targetLocations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(el => el.value);
 
                 if (favoriteFoods.length === 0 || targetLocations.length === 0) {
-                    alert("Please enter at least one favorite food and select a dining hall.");
+                    alert("please enter at least one food and select a dining hall");
                     return;
                 }
 
-                showLoading(true, "Scanning the week's menus...");
+                showLoading(true, "scanning menus...");
 
                 try {
                     const res = await fetch('/api/menu/full-week-report', { 
@@ -333,7 +545,7 @@
                     
                     if (!res.ok) {
                          const errorData = await res.json();
-                         throw new Error(errorData.error || 'Failed to get menu report from server.');
+                         throw new Error(errorData.error || 'failed to get report');
                     }
                     
                     const report = await res.json();
@@ -341,7 +553,7 @@
 
                 } catch (e) {
                     console.error(e);
-                    UIElements.resultsContainer.innerHTML = `<h2 class="text-xl font-bold mb-4 text-gray-800">Error</h2><p class="text-red-600">Could not connect to the dining hall server. Please try again later.</p>`;
+                    UIElements.resultsContainer.innerHTML = `<div class="result-card"><h3 class="result-title">error</h3><p class="result-text">could not connect to server</p></div>`;
                     UIElements.resultsContainer.classList.remove('hidden');
                 } finally {
                     showLoading(false);
