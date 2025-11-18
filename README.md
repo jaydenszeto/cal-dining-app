@@ -21,3 +21,5 @@ Application that helps students browse dining hall menus and track their favorit
 - Cafe 3
 - Foothill
 - Clark Kerr Campus
+
+<img width="1238" height="857" alt="image" src="https://github.com/user-attachments/assets/db986785-b2bf-482b-8d10-75a101700a70" />
